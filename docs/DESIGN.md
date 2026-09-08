@@ -638,6 +638,14 @@ any changed Apex class with **no covering test** — a coverage gap worth surfac
 regardless of test selection. `--json` emits a stable machine-readable shape for CI. Exit
 code is 0 even on fallback, unless `--fail-on-fallback` is passed.
 
+When `entry-point-policy-full` is the **sole** fallback rule that fired, the result also
+carries a `counterfactual`: what `entryPointPolicy: widen` would have selected on this
+repository, computed by re-running the analysis under that policy. It is deliberately
+withheld whenever any other rule also forced the full run, because changing the policy would
+not change the answer there. §6.3's default is conservative by design and stays that way;
+this exists so the conservatism is an informed choice rather than an unexplained full run.
+The extra analysis runs only on a fallback.
+
 #### Exit codes
 
 | Code | Meaning |

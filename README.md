@@ -301,6 +301,49 @@ impacted. That policy is the documented conservative default.
 The honest summary: **the tool is only useful if you set `entryPointPolicy: widen`**, and
 whether `full` should remain the default is a product decision, not a measurement.
 
+#### What the default does about that
+
+The default is unchanged — it still falls back on every commit in this window, and the safety
+argument for it is untouched. What changed is that it no longer leaves you to guess. When
+`entryPointPolicy: full` is the **only** reason for the fallback, `analyze` computes what
+`widen` would have selected **on your repository** and prints it with the fallback:
+
+Verbatim, from the same apex-recipes commit as the quickstart
+([artifact](docs/measurements/quickstart-apex-recipes.txt)):
+
+```
+Running the full suite (RunLocalTests). See the FALLBACK lines above.
+
+With `entryPointPolicy: widen` this change set would select 28 of 68 tests (58.82% skipped).
+  That assumes nothing outside this repository calls: QueueableChainingRecipes, LDVRecipes,
+  QueueableWithCalloutRecipes, AccountTrigger, CustomRestEndpointRecipes,
+  InboundEmailHandlerRecipes
+```
+
+Measured on the same 30-commit window
+([artifact](docs/measurements/apex-recipes-counterfactual.json)):
+
+| | |
+| --- | --- |
+| Commits where the default fell back | 30 / 30 |
+| Counterfactual offered | **16** |
+| Counterfactual withheld | 14 |
+| Times the quoted number disagreed with a real `widen` run | **0** |
+| Times it was withheld although `widen` would have helped | **0** |
+| On the 16 where it was offered: tests the default runs | 1,016 |
+| … tests `widen` would run | 518 (**49% fewer**) |
+
+The 16 is not a coincidence: it is exactly the set of commits where `entry-point-policy-full`
+was the sole fallback rule, which the selection-quality table above independently measures at
+16 of 30. On the other 14 the offer is withheld because something else — an unmodelled file
+type, a file missing from the index, a change to `sfdx-project.json` — would force a full run
+regardless of the policy, and pointing a reader at a setting that cannot help them is worse
+than saying nothing.
+
+The fallback also now names **every** impacted entry point rather than the first, because the
+decision a reader is being asked to make is whether anything outside the repository calls
+them, and they cannot answer that for a list they cannot see.
+
 #### The LWC/Aura extractor was deleted, and that raised the fallback rate
 
 An earlier revision of this README compared these figures against a previously published
@@ -614,6 +657,7 @@ The payload is wrapped by `sf` as `{status, result, warnings}`. `result` is vers
 | `coverageGaps` | object[] | Changed classes with no covering test. |
 | `range` | `{base, head}` | |
 | `changedFiles` | number | |
+| `counterfactual` | object \| null | What `entryPointPolicy: widen` would have selected, present only when `full` was the sole cause of the fallback. `null` otherwise. Fields: `policy`, `wouldSelect`, `totalTests`, `reductionPercent`, `assumesNoExternalCallerOf`. |
 | `graph` | `{nodes, edges, createdAt, indexedFiles}` | |
 
 On a hard error the process exits `1` and `--json` emits `{name, message, code, actions, …}`

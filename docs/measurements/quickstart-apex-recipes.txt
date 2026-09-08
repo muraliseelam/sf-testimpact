@@ -3,7 +3,7 @@ Commit under test: 2e2c1c3a8b197de06d6b709b877d1147c79fe26c  (chore: clean log)
 Base (parent):     0238895a89f5a87e3c3242d266eb68974d096f80
 Changed files:     force-app/main/default/classes/Platform Event Recipes/PlatformEventPublishCallback.cls 
 Plugin version:    1.0.0
-Captured:          2026-09-08T22:34:55Z
+Captured:          2026-09-08T22:56:06Z
 
 $ sf testimpact index
 Indexed 204 files: 204 parsed, 0 unchanged
@@ -14,11 +14,14 @@ Wrote .sf-testimpact/graph.json
 $ sf testimpact analyze --base 0238895a89f5a87e3c3242d266eb68974d096f80
 Changed files: 1  (0238895a89f5a87e3c3242d266eb68974d096f80...HEAD)
 
-FALLBACK  entry-point-policy-full: QueueableChainingRecipes is an entry point (queueable), so its callers may live outside this repository and the graph’s inbound edges to it are incomplete.
-          hint: `entryPointPolicy: widen` selects only the tests that reach an entry point of the same kind. Faster, but it assumes no unindexed caller reaches this class.
+FALLBACK  entry-point-policy-full: QueueableChainingRecipes is an entry point (queueable), so its callers may live outside this repository and the graph’s inbound edges to it are incomplete. 5 other impacted entry point(s): LDVRecipes, QueueableWithCalloutRecipes, AccountTrigger, CustomRestEndpointRecipes, InboundEmailHandlerRecipes.
+          hint: `entryPointPolicy: widen` selects only the tests that reach an entry point of the same kind. Faster, but it assumes no unindexed caller reaches these classes.
 WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because PlatformEventPublishCallback is impacted. Classes with unresolvable references into that domain are selected too.
 
 Running the full suite (RunLocalTests). See the FALLBACK lines above.
+
+With `entryPointPolicy: widen` this change set would select 28 of 68 tests (58.82% skipped).
+  That assumes nothing outside this repository calls: QueueableChainingRecipes, LDVRecipes, QueueableWithCalloutRecipes, AccountTrigger, CustomRestEndpointRecipes, InboundEmailHandlerRecipes
 
 --- .sf-testimpact.yml -> entryPointPolicy: widen ---
 $ sf testimpact analyze --base 0238895a89f5a87e3c3242d266eb68974d096f80

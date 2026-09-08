@@ -30,6 +30,25 @@ export interface AnalysisResult {
   readonly seeds: readonly NodeKey[];
   /** Changed classes that no test reaches — a deploy hazard regardless of selection. */
   readonly coverageGaps: readonly string[];
+  /**
+   * What a different policy would have selected, measured on this repository.
+   *
+   * Populated only when `entryPointPolicy: full` was the *sole* reason for the fallback, so
+   * it is only ever offered when changing that setting would actually change the answer.
+   * Shipped defaults produce a full run on most change sets, and a user has no way to judge
+   * the trade without numbers from their own code; this supplies them at the moment the
+   * fallback happens rather than asking them to go and run a benchmark.
+   */
+  readonly counterfactual?: PolicyCounterfactual;
+}
+
+export interface PolicyCounterfactual {
+  readonly policy: 'widen';
+  readonly wouldSelect: number;
+  readonly totalTests: number;
+  readonly reductionPercent: number;
+  /** The entry points whose external callers `widen` asks you to rule out. */
+  readonly assumesNoExternalCallerOf: readonly string[];
 }
 
 export function analyze(
@@ -83,6 +102,7 @@ export function analyze(
       impacted: closure.impacted,
       seeds: changeSet.seeds,
       coverageGaps: gaps,
+      ...counterfactualFor(graph, changed, config, decisions),
     };
   }
 
@@ -107,4 +127,49 @@ export function formatDecisions(decisions: readonly Decision[]): string[] {
     const head = `${label}  ${d.rule}: ${d.message}`;
     return d.hint === undefined ? head : `${head}\n          hint: ${d.hint}`;
   });
+}
+
+/**
+ * What `widen` would have selected, when `full` is the only thing standing in the way.
+ *
+ * Deliberately narrow. It is computed only if every fallback that fired was
+ * `entry-point-policy-full`: if anything else forced the full run — an unparseable file, an
+ * unmodelled type, a file missing from the index — then changing `entryPointPolicy` would
+ * not have changed the answer, and saying otherwise would send the reader to a setting that
+ * cannot help them.
+ *
+ * This re-runs the analysis rather than reusing the closure, because widening adds seeds and
+ * a widened entry point brings its own dependencies and taint activations. The extra run
+ * happens only on a fallback, and `analyze` is measured in single-digit milliseconds on
+ * apex-recipes and ~51 ms on NPSP, so the cost is paid exactly where it buys something.
+ *
+ * No recursion risk: the nested call runs with `entryPointPolicy: 'widen'`, which cannot
+ * emit `entry-point-policy-full`.
+ */
+function counterfactualFor(
+  graph: ImpactGraph,
+  changed: readonly ChangedFile[],
+  config: Config,
+  decisions: readonly Decision[],
+): { counterfactual?: PolicyCounterfactual } {
+  if (config.entryPointPolicy !== 'full') return {};
+
+  const fallbacks = decisions.filter((d) => d.level === 'fallback');
+  if (fallbacks.length === 0) return {};
+  if (!fallbacks.every((d) => d.rule === 'entry-point-policy-full')) return {};
+
+  const widened = analyze(graph, changed, { ...config, entryPointPolicy: 'widen' });
+  if (widened.outcome !== 'selected') return {};
+
+  const subjects = fallbacks.flatMap((d) => d.subjects ?? (d.subject === undefined ? [] : [d.subject]));
+
+  return {
+    counterfactual: {
+      policy: 'widen',
+      wouldSelect: widened.tests.length,
+      totalTests: widened.totalTests,
+      reductionPercent: widened.reductionPercent,
+      assumesNoExternalCallerOf: [...new Set(subjects)],
+    },
+  };
 }
