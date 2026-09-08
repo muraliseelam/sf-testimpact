@@ -1,0 +1,18 @@
+Apex source counts for the two benchmarked repositories, at the pinned commits.
+Captured: 2026-09-08T22:38:14Z
+
+Reproduce (per repo):
+  git ls-tree -r --name-only <commit> -- <sourcePath> | grep -c '\.cls$'
+  git ls-tree -r --name-only <commit>                 | grep -c '\.cls$'
+
+apex-recipes @ 87c1c9b674de15870e546b862fa93fbd04a4e130  (sourcePaths: force-app)
+  .cls under force-app : 139   <- indexed
+  .cls repo-wide  : 139   <- NOT all indexed
+  .trigger under force-app: 3
+
+NPSP @ 1e9e61908707e00faaef9f25982a85409d4b93e3  (sourcePaths: force-app)
+  .cls under force-app : 1035   <- indexed
+  .cls repo-wide  : 1044   <- NOT all indexed
+  .trigger under force-app: 26
+
+Only files under sourcePaths are indexed, so the indexed count is the meaningful one.

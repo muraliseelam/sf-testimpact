@@ -1,0 +1,14 @@
+npm weekly download counts for declared runtime dependencies.
+Source: https://api.npmjs.org/downloads/point/last-week/<package>
+Queried: 2026-09-08T22:41:38Z   Window reported by npm: 2026-08-31 .. 2026-09-06
+
+  @apexdevtools/apex-parser          51713
+  @salesforce/sf-plugins-core        824438
+  @salesforce/core                   739063
+  fast-xml-parser                    57812091
+  yaml                               176099792
+  picomatch                          435243028
+
+Not a declared dependency of this project:
+  @jsforce/jsforce-node  installed 3.10.25, required as ^3.10.24 by @salesforce/core@9.1.10
+  (the package named plain 'jsforce' is NOT present in this tree at all)

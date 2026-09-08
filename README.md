@@ -78,21 +78,30 @@ sf testimpact index                       # build the graph (offline)
 sf testimpact analyze --base main         # what would run for this branch?
 ```
 
-**On the shipped defaults, expect this:**
+Both blocks below are **verbatim output**, captured from
+[trailheadapps/apex-recipes](https://github.com/trailheadapps/apex-recipes) at commit
+`2e2c1c3a` (a one-class change), and retained at
+[`docs/measurements/quickstart-apex-recipes.txt`](docs/measurements/quickstart-apex-recipes.txt).
+
+**On the shipped defaults:**
 
 ```
-Changed files: 3  (main...HEAD)
+Changed files: 1  (0238895a...HEAD)
 
-FALLBACK  entry-point-policy-full: AccountTrigger is an entry point (trigger), so its
-          callers may live outside this repository and the graph's inbound edges to it
-          are incomplete.
+FALLBACK  entry-point-policy-full: QueueableChainingRecipes is an entry point (queueable),
+          so its callers may live outside this repository and the graph's inbound edges to
+          it are incomplete.
+          hint: `entryPointPolicy: widen` selects only the tests that reach an entry point
+          of the same kind.
+WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because
+          PlatformEventPublishCallback is impacted.
 
 Running the full suite (RunLocalTests). See the FALLBACK lines above.
 ```
 
 That is not a failure — it is `entryPointPolicy: full`, the conservative default, doing what
 it says. It selects nothing away until you tell it that unindexed callers are not a concern.
-Measured across 30 real commits, the default falls back **100%** of the time
+Across the 30-commit window measured below, the default falls back **100%** of the time
 ([Selection quality](#selection-quality)). **The tool only reduces anything once you opt in:**
 
 ```yaml
@@ -101,18 +110,24 @@ entryPointPolicy: widen
 ```
 
 ```
-Changed files: 3  (main...HEAD)
+Changed files: 1  (0238895a...HEAD)
 
+WIDEN     entry-point-policy-widen: QueueableChainingRecipes is an entry point (queueable).
+          Widening to 3 other entry point(s) of the same kind, because an unindexed caller
+          may reach the same subsystem through one of them.
 WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because
-          PricingService is impacted. Classes with unresolvable references into that
-          domain are selected too.
+          PlatformEventRecipesTrigger is impacted.
 
-Selected 4 of 68 tests (94.1% skipped)
-  DispatcherTest
-  PricingServiceTest
-  LegacyDataTest  [see-all-data]
-  SecurityBaselineTest  [always-run]
+Selected 28 of 68 tests (58.8% skipped)
+  AccountServiceLayer_Tests
+  AccountTriggerHandler_Tests
+  AuraEnabledRecipes_Tests
+  ... 24 more, listed in full in the artifact
+  TestFactory
 ```
+
+This is one commit, not a typical figure. The measured distribution across 30 commits is in
+[Selection quality](#selection-quality), where `widen` averages 26.2% overall reduction.
 
 Read [what `widen` gives up](#configuration) before you set it: it assumes no caller outside
 the repository reaches the changed code.
@@ -174,7 +189,12 @@ against any previously published number.
 | Repo | License | Commit | Apex classes | Indexed files |
 | --- | --- | --- | --- | --- |
 | [trailheadapps/apex-recipes](https://github.com/trailheadapps/apex-recipes) | CC0-1.0 | `87c1c9b6` | 139 | 204 |
-| [SalesforceFoundation/NPSP](https://github.com/SalesforceFoundation/NPSP) | BSD-3-Clause | `1e9e6190` | 1,044 | 2,470 |
+| [SalesforceFoundation/NPSP](https://github.com/SalesforceFoundation/NPSP) | BSD-3-Clause | `1e9e6190` | 1,035 | 2,470 |
+
+Apex class counts are `.cls` files under each project's `sourcePaths`
+([artifact](docs/measurements/benchmark-repo-facts.txt)). NPSP was previously listed as
+1,044, which is its repository-wide `.cls` count; 9 of those live outside `force-app` and are
+never indexed, so the indexed figure is the one that matches the 2,470.
 
 ### Index and query cost
 
@@ -198,10 +218,10 @@ Raw: [apex-recipes](docs/measurements/apex-recipes-timing.json),
 
 | Target | Result |
 | --- | --- |
-| Full index, 5,000 classes < 3 min | **Unverified.** Largest measured is 1,044 classes at 20.5 s. Not extrapolated. |
+| Full index, 5,000 classes < 3 min | **Unverified.** Largest measured is 1,035 classes at 20.5 s. Not extrapolated. |
 | Incremental index < 5 s | **Met** on both repos — 1.85 s on NPSP — under a warm cache. Cold-cache not measured. |
 | `analyze` from a warm graph < 2 s | Met on both repos. |
-| `graph.json` < 10 MB at 5,000 classes | Met at 1,044 classes: 1.28 MiB on disk, 8.25 MiB before compression. Unverified at 5,000. |
+| `graph.json` < 10 MB at 5,000 classes | Met at 1,035 classes: 1.28 MiB on disk, 8.25 MiB before compression. Unverified at 5,000. |
 
 NPSP's serialised graph is 8.25 MiB, which crosses the 8 MB threshold at which the index is
 gzipped, so NPSP is the case that exercises that path rather than a hypothetical one. The
@@ -209,21 +229,14 @@ compressed index is **6.5× smaller** than the JSON it encodes.
 
 #### A note on comparability with earlier figures
 
-An earlier version of this README quoted 2.50 s / 42.53 s for a full index and 7.05 s for an
-incremental one. **Those numbers are not comparable with the table above, and the difference
-is not a speed-up.** Two things changed, neither of them the indexing algorithm:
+Earlier revisions of this README quoted different absolute timings. **Those numbers have been
+deleted rather than restated: the artifacts that produced them were overwritten, so no
+committed evidence supports them.**
 
-1. **The page cache was cold then and is warm now.** The incremental profile below re-measures
-   the *identical* read-and-hash step — code that has not changed — at **1,386 ms** against
-   11,871 ms previously. A 8.6× swing in a step containing no changed code is cache state, not
-   progress.
-2. **Timing method.** The old incremental figure was taken in-process immediately after a full
-   index, so it ran in a heap still holding the entire graph on an 8 GB machine. Each figure
-   above is a fresh process, which is what a user actually runs.
-
-The code changes in this release only *add* edges to the graph. Adding edges cannot make
-indexing faster, so any apparent improvement here should be read as a measurement correction
-and nothing more. The retained artifacts record the conditions for both.
+What still holds, and matters when comparing against any figure from elsewhere, is the
+measurement method, which is stated above: five fresh processes per figure, warm filesystem
+cache. Timings taken in-process, or on a cold cache, are not comparable with these and can
+differ by a large factor. Cold-cache behaviour has not been measured.
 
 #### The incremental miss: the earlier explanation was wrong
 
@@ -253,11 +266,16 @@ produce a stale fact, and a stale fact is a missing edge.
 
 #### The 4 parse failures were not parse failures
 
-They were `datasets/` and `scripts/` files: two `%%%NAMESPACE%%%` templates and two
-anonymous-Apex scripts with no class wrapper, all using the `.cls` extension and all outside
-`force-app`. With `sourcePaths` set correctly the indexer never sees them, and NPSP now
-reports **0** unparseable files. The earlier figure was an artifact of a measurement harness
-that walked the repository root instead of the configured source paths.
+They were four `datasets/` and `scripts/` files
+([list](docs/measurements/npsp-unparseable-files.txt)): all four use the `.cls` extension,
+all four sit outside `force-app`, and **none has a class wrapper** — they are anonymous Apex
+scripts. Three also contain `%%%NAMESPACE%%%` template placeholders. With `sourcePaths` set
+correctly the indexer never sees them, and NPSP now reports **0** unparseable files
+([artifact](docs/measurements/npsp-index.json)); the 4 comes from the root-walking run
+([artifact](docs/measurements/npsp-window.json)).
+
+An earlier revision of this paragraph split them "two templates and two anonymous scripts",
+which is wrong on both halves: all four lack a class wrapper, and three carry placeholders.
 
 ### Selection quality
 
@@ -283,34 +301,32 @@ impacted. That policy is the documented conservative default.
 The honest summary: **the tool is only useful if you set `entryPointPolicy: widen`**, and
 whether `full` should remain the default is a product decision, not a measurement.
 
-#### These numbers moved against the previously published ones, and got worse
+#### The LWC/Aura extractor was deleted, and that raised the fallback rate
 
-This README previously reported 40% fallback and 29.6% reduction for `widen`. The current
-measurement is 46.7% and 26.2%. The cause is **deleting the LWC/Aura extractor**, and it is
-worth being precise about it because the ablation below did *not* predict it:
+An earlier revision of this README compared these figures against a previously published
+pair. **Those comparison numbers have been deleted: no committed artifact produced them.**
+The artifacts they were taken from were overwritten by a later re-run, so the comparison is
+not reproducible and is not stated here. What survives is what an artifact still supports.
 
-- Before deletion the index held **227** files; it now holds **204**. The difference is
-  exactly the **23** `lwc/` and `aura/` files matching the deleted extractor's
-  `\.(js|html|cmp|app|evt)$` rule.
-- Those files are now **unmodelled**, so a commit touching one forces a full run. That is
-  what moved the fallback rate: 12 of 30 commits fell back before, 14 do now.
+The deletion itself is recorded. The extractor matched
+`(lwc|aura)/**.{js,html,cmp,app,evt}`, and **23** files in apex-recipes match that rule
+([list](docs/measurements/apex-recipes-lwc-aura-files.txt)). Those files are no longer
+indexed, so a commit touching one is an unmodelled file type and forces a full run. In the
+current 30-commit window `unmodelled-file-type` accounts for 8 of the 14 fallbacks under
+`widen` ([artifact](docs/measurements/apex-recipes-window-widen.json)).
 
-**The provenance ablation under-measured this, and the README previously repeated its
-conclusion too confidently.** Ablating a provenance class removes its *edges* but leaves its
-files *modelled*; deleting the extractor removes both. So the measured "regex edges cost zero
-extra tests" was true and yet said nothing about the fallback rate, which is where the
-extractor actually mattered.
+**The provenance ablation could not have predicted this, and that is a methodological point
+worth keeping.** Ablating a provenance class removes its *edges* while leaving its files
+*modelled*; deleting an extractor removes both. So a measurement showing "regex edges cost
+zero extra tests" says nothing about the fallback rate, which is where file modelling acts.
+The magnitude of that effect is not quantified here, because measuring it would require
+re-running the window against a build that still has the extractor.
 
-Deleting it was still right, and the reason is the safety rule rather than the reduction
-figure. Its edges ran UI → Apex while the query walks backwards, so a changed LWC file could
-never reach an Apex test: the tool was answering "this LWC change affects no Apex test" from
-a model structurally incapable of answering anything else. Trading 3.4 points of reduction
-for an honest fallback is the trade this project is supposed to make. The cost is now
-recorded rather than hidden.
-
-What did improve materially, and still holds: `widen` and `strict` previously reached their
-reduction figures **only with a hand-written `excludeFromImpact` list**. They now reach them
-with no configuration at all.
+Deleting it was still right, for a structural reason rather than a measured one. Its edges
+ran UI → Apex while the query walks backwards, so a changed LWC file could never reach an
+Apex test: the tool was answering "this LWC change affects no Apex test" from a model
+incapable of answering anything else. A fallback is the honest answer to a question the
+graph cannot address.
 
 #### What was fixed, ranked by measured cause
 
@@ -443,7 +459,8 @@ It is conditional on the graph's *inbound* edges to `C` being complete:
 
 The last matters most in non-source-tracked orgs, which routinely contain Apex the repo does
 not. `deploy --verify-coverage` queries the org for exactly this drift — the only command
-that contacts an org, with `jsforce` behind a dynamic import so `index` and `analyze` cannot.
+that contacts an org, with `@salesforce/core` behind a dynamic import so `index` and
+`analyze` cannot.
 
 ## Limitations
 

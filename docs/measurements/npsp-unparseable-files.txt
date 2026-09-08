@@ -1,0 +1,13 @@
+The 4 files NPSP reported as unparseable when the harness walked the repository root.
+Source of the count: docs/measurements/npsp-window.json (indexedFiles 2884, unparseable 4).
+Repository: SalesforceFoundation/NPSP @ 1e9e61908707e00faaef9f25982a85409d4b93e3
+Captured: 2026-09-08T22:39:22Z
+
+All four use the .cls extension, all four sit OUTSIDE force-app (the configured
+sourcePath), and none has a class wrapper - they are anonymous Apex scripts.
+Three additionally contain %%%NAMESPACE%%% template placeholders.
+
+  datasets/rd2/config_npsp_for_ldv_data_load.cls           class wrapper: no   %%%NAMESPACE%%% occurrences: 17
+  scripts/New_Testing_User.cls                             class wrapper: no   %%%NAMESPACE%%% occurrences: 0
+  scripts/configure_npsp_default_settings.cls              class wrapper: no   %%%NAMESPACE%%% occurrences: 50
+  scripts/trial/TrialCustomSettingsDefaults.cls            class wrapper: no   %%%NAMESPACE%%% occurrences: 11
