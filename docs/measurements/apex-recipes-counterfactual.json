@@ -1,0 +1,438 @@
+{
+  "repo": "C:/t/ar",
+  "commits": 30,
+  "defaultFallbacks": 30,
+  "counterfactualOffered": 16,
+  "counterfactualWithheld": 14,
+  "predictionMismatches": 0,
+  "withheldButWidenWouldHaveHelped": 0,
+  "whenOffered": {
+    "testsTheDefaultRuns": 1016,
+    "testsWidenWouldRun": 518,
+    "reductionPercent": 49
+  },
+  "withheldRules": [
+    "unmodelled-file-type",
+    "changed-file-not-in-index",
+    "project-config-changed",
+    "entry-point-policy-full"
+  ],
+  "rows": [
+    {
+      "commit": "fd1655ec",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "unmodelled-file-type",
+        "changed-file-not-in-index",
+        "project-config-changed",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 61,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "5ae176e1",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 29,
+      "totalTests": 61,
+      "actualWiden": 29,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 6
+    },
+    {
+      "commit": "f8b3fb9f",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "unmodelled-file-type",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 61,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "8ae67618",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 29,
+      "totalTests": 61,
+      "actualWiden": 29,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 6
+    },
+    {
+      "commit": "cb231d94",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "unmodelled-file-type",
+        "project-config-changed",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 61,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "6799b6a3",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "changed-file-not-in-index",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 61,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "f6b37067",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "unmodelled-file-type",
+        "changed-file-not-in-index",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 61,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "7d65ac49",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "changed-file-not-in-index",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 61,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "445febd9",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 33,
+      "totalTests": 61,
+      "actualWiden": 33,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 8
+    },
+    {
+      "commit": "c2369651",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 33,
+      "totalTests": 61,
+      "actualWiden": 33,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 8
+    },
+    {
+      "commit": "45701037",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 30,
+      "totalTests": 61,
+      "actualWiden": 30,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 6
+    },
+    {
+      "commit": "e1663c4e",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 29,
+      "totalTests": 61,
+      "actualWiden": 29,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 7
+    },
+    {
+      "commit": "0d3747b7",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "unmodelled-file-type",
+        "changed-file-not-in-index",
+        "project-config-changed",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 63,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "2973fffd",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 29,
+      "totalTests": 63,
+      "actualWiden": 29,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 6
+    },
+    {
+      "commit": "3b68dfc8",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 29,
+      "totalTests": 63,
+      "actualWiden": 29,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 6
+    },
+    {
+      "commit": "64cfd927",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "changed-file-not-in-index",
+        "unmodelled-file-type"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 62,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "f74e85be",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "unmodelled-file-type",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 62,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "46f7dc02",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 31,
+      "totalTests": 62,
+      "actualWiden": 31,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 6
+    },
+    {
+      "commit": "c3c57355",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "changed-file-not-in-index",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 62,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "04f2eb5a",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 29,
+      "totalTests": 62,
+      "actualWiden": 29,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 6
+    },
+    {
+      "commit": "254de9cc",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 30,
+      "totalTests": 64,
+      "actualWiden": 30,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 6
+    },
+    {
+      "commit": "2132f1e5",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 28,
+      "totalTests": 64,
+      "actualWiden": 28,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 6
+    },
+    {
+      "commit": "feeab105",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "changed-file-not-in-index",
+        "unmodelled-file-type",
+        "project-config-changed",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 68,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "a9b2d5a9",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "unmodelled-file-type",
+        "changed-file-not-in-index",
+        "project-config-changed",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 68,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "2e2c1c3a",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 28,
+      "totalTests": 68,
+      "actualWiden": 28,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 6
+    },
+    {
+      "commit": "ee106ee2",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 28,
+      "totalTests": 68,
+      "actualWiden": 28,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 6
+    },
+    {
+      "commit": "cee74549",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "unmodelled-file-type",
+        "project-config-changed",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 68,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "ee3a342b",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "changed-file-not-in-index",
+        "unmodelled-file-type",
+        "entry-point-policy-full"
+      ],
+      "offered": false,
+      "predicted": null,
+      "totalTests": 68,
+      "actualWiden": null,
+      "widenOutcome": "full",
+      "namedEntryPoints": 0
+    },
+    {
+      "commit": "8cc7406e",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 46,
+      "totalTests": 68,
+      "actualWiden": 46,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 18
+    },
+    {
+      "commit": "bea56904",
+      "defaultOutcome": "full",
+      "fallbackRules": [
+        "entry-point-policy-full"
+      ],
+      "offered": true,
+      "predicted": 57,
+      "totalTests": 68,
+      "actualWiden": 57,
+      "widenOutcome": "selected",
+      "namedEntryPoints": 18
+    }
+  ]
+}

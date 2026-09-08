@@ -24,6 +24,15 @@ export interface Decision {
   readonly message: string;
   /** What the user could change, when there is a real trade to offer. */
   readonly hint?: string;
+  /**
+   * Every subject the rule fired on, when there is more than one.
+   *
+   * `subject` names only the first, which is enough to identify the rule but not enough to
+   * act on it: a reader deciding whether to accept `entryPointPolicy: widen` needs the whole
+   * list of entry points whose external callers they are being asked to rule out, not a
+   * sample of one.
+   */
+  readonly subjects?: readonly string[];
 }
 
 /** Recognised extensions: anything else is metadata we do not model. */
@@ -151,7 +160,9 @@ export function applyEntryPointPolicy(
   const categories = describeCategories(first.entryPoints ?? []);
 
   switch (config.entryPointPolicy) {
-    case 'full':
+    case 'full': {
+      const names = [...new Set(impactedEntryPoints.map((n) => n?.name ?? '').filter(Boolean))];
+      const others = names.length - 1;
       return {
         extraSeeds: [],
         decisions: [
@@ -159,15 +170,19 @@ export function applyEntryPointPolicy(
             level: 'fallback',
             rule: 'entry-point-policy-full',
             subject: first.name,
+            subjects: names,
             message:
               `${first.name} is ${categories}, so its callers may live outside this repository ` +
-              'and the graph’s inbound edges to it are incomplete.',
+              'and the graph’s inbound edges to it are incomplete.' +
+              (others > 0 ? ` ${others} other impacted entry point(s): ${names.slice(1).join(', ')}.` : ''),
             hint:
               '`entryPointPolicy: widen` selects only the tests that reach an entry point of the ' +
-              'same kind. Faster, but it assumes no unindexed caller reaches this class.',
+              'same kind. Faster, but it assumes no unindexed caller reaches ' +
+              (names.length === 1 ? 'this class.' : 'these classes.'),
           },
         ],
       };
+    }
 
     case 'widen': {
       const wanted = new Set<EntryPointKind>();

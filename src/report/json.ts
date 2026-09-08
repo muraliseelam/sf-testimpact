@@ -43,6 +43,18 @@ export interface AnalyzeJson {
   readonly activatedTaintDomains: readonly string[];
   /** Changed classes no test reaches — a deploy hazard whatever the selection. */
   readonly coverageGaps: readonly string[];
+  /**
+   * What `entryPointPolicy: widen` would have selected on this repository, present only when
+   * `full` was the sole cause of the fallback. `null` otherwise — including when some other
+   * rule forced the full run, where changing the policy would not help.
+   */
+  readonly counterfactual: {
+    readonly policy: string;
+    readonly wouldSelect: number;
+    readonly totalTests: number;
+    readonly reductionPercent: number;
+    readonly assumesNoExternalCallerOf: readonly string[];
+  } | null;
   readonly range: { readonly base: string; readonly head: string };
   readonly changedFiles: number;
   readonly graph: {
@@ -81,6 +93,16 @@ export function toAnalyzeJson(input: AnalyzeJsonInput): AnalyzeJson {
       message: d.message,
       hint: d.hint ?? null,
     })),
+    counterfactual:
+      result.counterfactual === undefined
+        ? null
+        : {
+            policy: result.counterfactual.policy,
+            wouldSelect: result.counterfactual.wouldSelect,
+            totalTests: result.counterfactual.totalTests,
+            reductionPercent: Math.round(result.counterfactual.reductionPercent * 100) / 100,
+            assumesNoExternalCallerOf: [...result.counterfactual.assumesNoExternalCallerOf],
+          },
     fellBack: result.outcome === 'full',
     activatedTaintDomains: [...result.activatedDomains],
     coverageGaps: [...result.coverageGaps],

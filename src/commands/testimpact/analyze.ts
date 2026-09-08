@@ -91,6 +91,19 @@ export default class TestImpactAnalyze extends SfCommand<AnalyzeJson> {
     this.log('');
     if (json.outcome === 'full') {
       this.log(`Running the full suite (${json.testLevel}). See the FALLBACK lines above.`);
+      // The one number a reader needs to judge the setting, measured on their own code.
+      // Without it "try entryPointPolicy: widen" is advice they cannot evaluate.
+      if (json.counterfactual !== null) {
+        const c = json.counterfactual;
+        this.log('');
+        this.log(
+          `With \`entryPointPolicy: ${c.policy}\` this change set would select ` +
+            `${c.wouldSelect} of ${c.totalTests} tests (${c.reductionPercent}% skipped).`,
+        );
+        this.log(
+          `  That assumes nothing outside this repository calls: ${c.assumesNoExternalCallerOf.join(', ')}`,
+        );
+      }
     } else {
       this.log(
         `Selected ${json.selectedCount} of ${json.totalTests} tests ` +

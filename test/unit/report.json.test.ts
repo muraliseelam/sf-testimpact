@@ -35,6 +35,10 @@ describe('analyze --json shape', () => {
     expect(Object.keys(json).sort()).toEqual([
       'activatedTaintDomains',
       'changedFiles',
+      // Added within schemaVersion 1, which this module's contract explicitly permits: it is
+      // always present, and `null` whenever there is no alternative policy worth offering,
+      // so a consumer reading it never has to test for the key's existence.
+      'counterfactual',
       'coverageGaps',
       'decisions',
       'fellBack',
