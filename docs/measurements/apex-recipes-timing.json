@@ -1,0 +1,40 @@
+{
+  "label": "trailheadapps/apex-recipes",
+  "repo": "C:/t/ar",
+  "note": "One fresh node process per timed run. Warm filesystem cache; the cache is not dropped between runs.",
+  "hardware": {
+    "cpus": 12,
+    "model": "Intel(R) Core(TM) 5 120U",
+    "memGB": 8
+  },
+  "nodeVersion": "v24.19.0",
+  "indexedFiles": 204,
+  "nodes": 649,
+  "edges": 1128,
+  "graphPath": "C:/t/ar/.sf-testimpact/graph.json",
+  "graphBytes": 367289,
+  "fullIndex": {
+    "runs": 5,
+    "minMs": 1416.4,
+    "medianMs": 1422.9,
+    "maxMs": 1639.6,
+    "spreadPercent": 15.8
+  },
+  "incrementalTouched": "force-app/main/default/classes/Async Apex Recipes/AtFutureRecipes.cls",
+  "incrementalReExtracted": 1,
+  "incrementalReused": 203,
+  "incrementalIndex": {
+    "runs": 5,
+    "minMs": 195.7,
+    "medianMs": 203.8,
+    "maxMs": 222.6,
+    "spreadPercent": 13.8
+  },
+  "loadGraph": {
+    "runs": 5,
+    "minMs": 19.2,
+    "medianMs": 19.4,
+    "maxMs": 20.6,
+    "spreadPercent": 7
+  }
+}

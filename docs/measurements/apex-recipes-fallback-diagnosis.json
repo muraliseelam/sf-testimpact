@@ -1,0 +1,32 @@
+{
+  "commits": 30,
+  "paths": 1715,
+  "modelled": 277,
+  "unmodelledInSource": {
+    ".md": 457,
+    ".dwl-meta.xml": 47,
+    ".js-meta.xml": 45,
+    ".cls-meta.xml": 28,
+    ".dwl": 17,
+    ".js": 10,
+    ".json": 7,
+    ".html": 7,
+    ".css": 3,
+    ".txt": 1,
+    ".namedCredential-meta.xml": 1
+  },
+  "outsideSource": {
+    ".json": 22,
+    ".md": 16,
+    ".yml": 13,
+    ".sh": 3,
+    ".bat": 1,
+    ".apex": 1
+  },
+  "companionMetaWithIndexedBase": {
+    ".cls-meta.xml": 741,
+    ".trigger-meta.xml": 18
+  },
+  "commitsWithAnyUnmodelledInSource": 26,
+  "commitsWithOnlyOutsideSourceNoise": 0
+}

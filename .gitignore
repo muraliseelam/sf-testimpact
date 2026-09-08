@@ -1,0 +1,19 @@
+node_modules/
+lib/
+coverage/
+*.tsbuildinfo
+oclif.manifest.json
+
+# Generated index — see docs/DESIGN.md section 4.4. Cached in CI, never committed.
+.sf-testimpact/
+
+# Benchmark output
+bench/results/
+
+# Secrets and org state — never commit (CLAUDE.md)
+.env
+.env.*
+.sfdx/
+.sf/
+*.log
+config/*-scratch-def.json

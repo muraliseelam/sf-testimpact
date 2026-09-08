@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    # The default branch is currently `master`; `main` is listed so this keeps working if it
+    # is renamed. Before this, CI triggered only on `main` and had never actually run.
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.13', '24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run test:coverage

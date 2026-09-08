@@ -1,0 +1,83 @@
+{
+  "label": "trailheadapps/apex-recipes",
+  "repo": "C:/t/ar",
+  "hardware": {
+    "cpus": 12,
+    "model": "Intel(R) Core(TM) 5 120U",
+    "memGB": 8
+  },
+  "head": "87c1c9b674de15870e546b862fa93fbd04a4e130",
+  "headDate": "2026-09-03T00:05:45Z",
+  "fullIndexMs": 1965.839,
+  "indexedFiles": 204,
+  "extracted": 204,
+  "nodes": 649,
+  "edges": 1128,
+  "taints": 50,
+  "unparseable": 0,
+  "graphPath": "C:/t/ar/.sf-testimpact/graph.json",
+  "graphGzipped": false,
+  "graphBytes": 367289,
+  "graphBytesUncompressed": 367289,
+  "edgesByProvenance": {
+    "ast": 956,
+    "xml": 172
+  },
+  "nodesByKind": {
+    "apex": 355,
+    "apexInner": 51,
+    "flow": 1,
+    "label": 1,
+    "sobject": 44,
+    "field": 178,
+    "permset": 10,
+    "staticresource": 6,
+    "trigger": 3
+  },
+  "testClasses": 68,
+  "incrementalIndexMs": 151.9689,
+  "incrementalReExtracted": 1,
+  "incrementalReused": 203,
+  "loadMs": 10.6703,
+  "window": {
+    "commits": 30,
+    "analyzeMeanMs": 0.8401033333333335,
+    "fallbacks": 14,
+    "fallbackRatePercent": 46.666666666666664,
+    "meanReductionSelectedOnly": 49.169611561022265,
+    "overallReductionPercent": 26.169206516027327,
+    "totalSelected": 1405,
+    "totalAvailable": 1903,
+    "fallbackRules": {
+      "unmodelled-file-type": 8,
+      "changed-file-not-in-index": 6
+    },
+    "unmodelledExtensions": {
+      ".js-meta.xml": 2,
+      ".json": 1,
+      ".css": 1,
+      ".permissionsetgroup-meta.xml": 1,
+      ".namedCredential-meta.xml": 1,
+      ".dwl-meta.xml": 2
+    },
+    "fallbackSubjects": [
+      "unmodelled-file-type: force-app/main/default/lwc/apexRecipesContainer/apexRecipesContainer.js-meta.xml",
+      "unmodelled-file-type: force-app/main/default/lwc/.eslintrc.json",
+      "unmodelled-file-type: force-app/main/default/lwc/apexRecipesContainer/apexRecipesContainer.js-meta.xml",
+      "changed-file-not-in-index: force-app/main/default/lwc/formattedDocsViewer/formattedDocsViewer.js",
+      "unmodelled-file-type: force-app/main/default/lwc/formattedDocsViewer/formattedDocsViewer.css",
+      "changed-file-not-in-index: force-app/main/default/lwc/formattedDocsViewer/__tests__/formattedDocsViewer.test.js",
+      "unmodelled-file-type: force-app/main/default/SalesPersona.permissionsetgroup-meta.xml",
+      "changed-file-not-in-index: force-app/tests/CI Recipes/DeprecatedAPIVersionScanner_Tests.cls",
+      "unmodelled-file-type: force-app/main/default/namedCredentials/MockBin.namedCredential-meta.xml",
+      "changed-file-not-in-index: force-app/main/default/lwc/formattedRecipeDisplay/formattedRecipeDisplay.js",
+      "changed-file-not-in-index: force-app/main/default/classes/DataWeaveInApex Recipes/CsvToJsonConversion.cls",
+      "unmodelled-file-type: force-app/main/default/dw/csvSeparatorToJson.dwl-meta.xml"
+    ]
+  },
+  "excludeFromImpact": [],
+  "entryPointPolicy": "widen",
+  "indexAt": "head",
+  "falseNegatives": null,
+  "falseNegativesReason": "Not measurable: computing it requires per-commit historical Apex test results (passed at c^, failed at c). No public Salesforce repository publishes those, and producing them would require running each commit against a real org."
+}

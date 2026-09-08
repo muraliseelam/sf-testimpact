@@ -1,0 +1,111 @@
+{
+  "repo": "C:/t/ar",
+  "commits": 20,
+  "policy": "widen",
+  "baselineSelected": 908,
+  "baselineFallbacks": 8,
+  "rows": [
+    {
+      "provenance": "ast",
+      "edgesAcrossWindow": 18046,
+      "selectedWithout": 611,
+      "extraTestsCost": 297,
+      "fallbacksWithout": 8
+    },
+    {
+      "provenance": "xml",
+      "edgesAcrossWindow": 3440,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    },
+    {
+      "provenance": "regex",
+      "edgesAcrossWindow": 0,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    },
+    {
+      "provenance": "widened",
+      "edgesAcrossWindow": 0,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    }
+  ],
+  "kindRows": [
+    {
+      "kind": "extends",
+      "edgesAcrossWindow": 220,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    },
+    {
+      "kind": "implements",
+      "edgesAcrossWindow": 207,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    },
+    {
+      "kind": "refType",
+      "edgesAcrossWindow": 10445,
+      "selectedWithout": 613,
+      "extraTestsCost": 295,
+      "fallbacksWithout": 8
+    },
+    {
+      "kind": "soqlRead",
+      "edgesAcrossWindow": 4162,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    },
+    {
+      "kind": "dml",
+      "edgesAcrossWindow": 1022,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    },
+    {
+      "kind": "describe",
+      "edgesAcrossWindow": 1930,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    },
+    {
+      "kind": "triggerOn",
+      "edgesAcrossWindow": 60,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    },
+    {
+      "kind": "memberOf",
+      "edgesAcrossWindow": 600,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    },
+    {
+      "kind": "flowTouches",
+      "edgesAcrossWindow": 40,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    },
+    {
+      "kind": "grants",
+      "edgesAcrossWindow": 2800,
+      "selectedWithout": 908,
+      "extraTestsCost": 0,
+      "fallbacksWithout": 8
+    }
+  ],
+  "falseNegativesPrevented": null,
+  "falseNegativesReason": "Requires per-commit historical Apex test results, which no public repository publishes."
+}

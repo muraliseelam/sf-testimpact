@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# NOT keyed on the ref. A ref-keyed group lets two refs release at the same time, which is
+# exactly what happened while `main` and `master` both existed and both triggered this
+# workflow: two semantic-release runs raced to publish the same version. One group per
+# repository means releases always serialise, whatever triggers them.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # semantic-release commits the changelog and pushes the tag
+      issues: write # release notes are posted to related issues
+      pull-requests: write
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # semantic-release reads the full tag history
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          # semantic-release 25 requires ^22.22.2 || >=24.15.
+          node-version: '24'
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      # The gate. A release must never ship code that has not passed the same checks a PR does.
+      - run: npm run lint
+      - run: npm run build
+      - run: npm run test
+
+      # Preflight. @semantic-release/npm verifies auth by calling `npm whoami`, and when that
+      # 401s it reports only "EINVALIDNPMTOKEN Invalid npm token", which is true but names
+      # neither the cause nor the fix. The most common cause here is not a bad secret at all:
+      # npm GRANULAR access tokens are rejected by /-/whoami even when they can publish
+      # perfectly well. This step separates the cases before the release starts, and never
+      # echoes the token.
+      - name: Preflight npm authentication
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NPM_TOKEN}" ]; then
+            echo "::error::NPM_TOKEN secret is empty or unset."
+            exit 1
+          fi
+          trimmed="$(printf '%s' "${NPM_TOKEN}" | tr -d '[:space:]')"
+          if [ "${#trimmed}" -ne "${#NPM_TOKEN}" ]; then
+            echo "::error::NPM_TOKEN contains whitespace (probably a trailing newline from \`gh secret set\`). Re-set it with: printf '%s' \"\$TOKEN\" | gh secret set NPM_TOKEN"
+            exit 1
+          fi
+          echo "NPM_TOKEN present: ${#NPM_TOKEN} chars, prefix '$(printf '%s' "${NPM_TOKEN}" | cut -c1-4)'"
+          if npm whoami >/tmp/whoami 2>/tmp/whoami.err; then
+            echo "npm whoami: $(cat /tmp/whoami)"
+          else
+            echo "::error::npm whoami failed - semantic-release will abort with EINVALIDNPMTOKEN."
+            sed 's/^/  /' /tmp/whoami.err || true
+            echo "::error::Check in order: (1) does the semantic-release step below also set NODE_AUTH_TOKEN? setup-node's .npmrc interpolates that name, not NPM_TOKEN. (2) is the token revoked or expired? (3) npm Trusted Publishing removes the token entirely: on npmjs.com open the sf-testimpact package -> Settings -> Trusted Publisher -> GitHub Actions, repo muraliseelam/sf-testimpact, workflow release.yml."
+            exit 1
+          fi
+
+      # NODE_AUTH_TOKEN is not redundant with NPM_TOKEN, and leaving it out is what broke
+      # every release run so far. actions/setup-node with `registry-url` writes an .npmrc at
+      # NPM_CONFIG_USERCONFIG containing, literally:
+      #     //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
+      # npm expands that variable at read time. semantic-release inherits that config, so
+      # without NODE_AUTH_TOKEN in *this* step the token expands to an empty string and
+      # `npm whoami` returns 401, which surfaces as the misleading "EINVALIDNPMTOKEN Invalid
+      # npm token" - misleading because the token is fine. The preflight step above proved
+      # it: the same `npm whoami`, four seconds earlier, succeeded there purely because that
+      # step sets NODE_AUTH_TOKEN.
+      - run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+          GIT_AUTHOR_NAME: Murali Seelam
+          GIT_AUTHOR_EMAIL: muraliseelam1@gmail.com
+          GIT_COMMITTER_NAME: Murali Seelam
+          GIT_COMMITTER_EMAIL: muraliseelam1@gmail.com

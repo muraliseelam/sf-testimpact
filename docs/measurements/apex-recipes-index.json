@@ -1,0 +1,64 @@
+{
+  "label": "trailheadapps/apex-recipes",
+  "repo": "C:/t/ar",
+  "hardware": {
+    "cpus": 12,
+    "model": "Intel(R) Core(TM) 5 120U",
+    "memGB": 8
+  },
+  "head": "87c1c9b674de15870e546b862fa93fbd04a4e130",
+  "headDate": "2026-09-03T00:05:45Z",
+  "fullIndexMs": 1939.2414,
+  "indexedFiles": 204,
+  "extracted": 204,
+  "nodes": 649,
+  "edges": 1128,
+  "taints": 50,
+  "unparseable": 0,
+  "graphPath": "C:/t/ar/.sf-testimpact/graph.json",
+  "graphGzipped": false,
+  "graphBytes": 367289,
+  "graphBytesUncompressed": 367289,
+  "edgesByProvenance": {
+    "ast": 956,
+    "xml": 172
+  },
+  "nodesByKind": {
+    "apex": 355,
+    "apexInner": 51,
+    "flow": 1,
+    "label": 1,
+    "sobject": 44,
+    "field": 178,
+    "permset": 10,
+    "staticresource": 6,
+    "trigger": 3
+  },
+  "testClasses": 68,
+  "incrementalIndexMs": 174.7599,
+  "incrementalReExtracted": 1,
+  "incrementalReused": 203,
+  "loadMs": 20.0309,
+  "window": {
+    "commits": 1,
+    "analyzeMeanMs": 3.8671,
+    "fallbacks": 1,
+    "fallbackRatePercent": 100,
+    "meanReductionSelectedOnly": null,
+    "overallReductionPercent": 0,
+    "totalSelected": 68,
+    "totalAvailable": 68,
+    "fallbackRules": {
+      "entry-point-policy-full": 1
+    },
+    "unmodelledExtensions": {},
+    "fallbackSubjects": [
+      "entry-point-policy-full: AtFutureRecipes"
+    ]
+  },
+  "excludeFromImpact": [],
+  "entryPointPolicy": "full",
+  "indexAt": "parent",
+  "falseNegatives": null,
+  "falseNegativesReason": "Not measurable: computing it requires per-commit historical Apex test results (passed at c^, failed at c). No public Salesforce repository publishes those, and producing them would require running each commit against a real org."
+}

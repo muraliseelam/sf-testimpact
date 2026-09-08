@@ -1,0 +1,88 @@
+{
+  "name": "sf-testimpact",
+  "version": "1.0.0",
+  "description": "Test-impact analysis for Salesforce: run only the Apex tests a change set can affect.",
+  "license": "MIT",
+  "author": "Murali Seelam",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muraliseelam/sf-testimpact.git"
+  },
+  "bugs": {
+    "url": "https://github.com/muraliseelam/sf-testimpact/issues"
+  },
+  "homepage": "https://github.com/muraliseelam/sf-testimpact#readme",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "!lib/bench",
+    "!lib/**/*.map",
+    "!lib/**/*.tsbuildinfo",
+    "oclif.manifest.json"
+  ],
+  "keywords": [
+    "salesforce",
+    "sf-plugin",
+    "sfdx-plugin",
+    "apex",
+    "test-impact-analysis",
+    "ci"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "check": "npm run lint && npm run build && npm run test",
+    "prepack": "npm run clean:lib && npm run build && oclif manifest",
+    "postpack": "node -e \"require('node:fs').rmSync('oclif.manifest.json',{force:true})\"",
+    "clean:lib": "node -e \"const fs=require('node:fs');fs.rmSync('lib',{recursive:true,force:true});fs.rmSync('tsconfig.tsbuildinfo',{force:true})\""
+  },
+  "dependencies": {
+    "@apexdevtools/apex-parser": "5.2.0",
+    "@salesforce/core": "9.1.10",
+    "@salesforce/sf-plugins-core": "13.0.4",
+    "fast-xml-parser": "5.11.1",
+    "picomatch": "4.0.7",
+    "yaml": "2.9.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@semantic-release/changelog": "7.0.0",
+    "@semantic-release/git": "11.0.1",
+    "@types/node": "22.20.1",
+    "@types/picomatch": "4.0.3",
+    "@typescript-eslint/eslint-plugin": "8.69.0",
+    "@typescript-eslint/parser": "8.69.0",
+    "@vitest/coverage-v8": "5.0.0",
+    "eslint": "10.10.0",
+    "oclif": "5.0.1",
+    "semantic-release": "25.0.9",
+    "typescript": "5.9.3",
+    "vitest": "5.0.0"
+  },
+  "oclif": {
+    "commands": "./lib/commands",
+    "bin": "sf",
+    "topicSeparator": " ",
+    "topics": {
+      "testimpact": {
+        "description": "Select the Apex tests a change set can affect."
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "label": "SalesforceFoundation/NPSP",
+  "repo": "C:/t/npsp",
+  "note": "One fresh node process per timed run. Warm filesystem cache; the cache is not dropped between runs.",
+  "hardware": {
+    "cpus": 12,
+    "model": "Intel(R) Core(TM) 5 120U",
+    "memGB": 8
+  },
+  "nodeVersion": "v24.19.0",
+  "indexedFiles": 2470,
+  "nodes": 7436,
+  "edges": 42580,
+  "graphPath": "C:/t/npsp/.sf-testimpact/graph.json.gz",
+  "graphBytes": 1339163,
+  "fullIndex": {
+    "runs": 5,
+    "minMs": 19787.1,
+    "medianMs": 20525.2,
+    "maxMs": 21643.3,
+    "spreadPercent": 9.4
+  },
+  "incrementalTouched": "force-app/infrastructure/apex-common/main/classes/fflib_Application.cls",
+  "incrementalReExtracted": 1,
+  "incrementalReused": 2469,
+  "incrementalIndex": {
+    "runs": 5,
+    "minMs": 1767.7,
+    "medianMs": 1853.3,
+    "maxMs": 1906.8,
+    "spreadPercent": 7.9
+  },
+  "loadGraph": {
+    "runs": 5,
+    "minMs": 276.7,
+    "medianMs": 291.4,
+    "maxMs": 302.6,
+    "spreadPercent": 9.3
+  }
+}
