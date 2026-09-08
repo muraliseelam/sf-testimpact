@@ -220,9 +220,10 @@ be a second source of truth that could silently disagree with the first.
 
 ### 4.4 On-disk format — `.sf-testimpact/graph.json`
 
-Columnar, with interned strings. A 5,000-class org is expected to produce on the order of
-200k edges; naive object-per-edge JSON would be 30–40 MB and would blow the 5-second
-incremental budget on `JSON.parse` alone.
+Columnar, with interned strings, to keep `JSON.parse` off the critical path of an incremental
+index. Neither the edge count nor the file size of a 5,000-class org has been measured — the
+largest measured project is NPSP at 1,035 classes and 42,580 edges, whose serialised graph is
+8.25 MiB before compression ([artifact](measurements/npsp-index.json)).
 
 > **The JSON below is illustrative, not the shipped format.** The persisted artifact stores
 > the per-file *extractor facts* — declarations, references, taints, diagnostics — and
@@ -231,7 +232,8 @@ incremental budget on `JSON.parse` alone.
 > newly added class makes a reference in an untouched file resolve for the first time, and
 > hierarchy widening changes the edges out of every consumer of an interface whenever an
 > implementor is added), so patching a stored edge list is unsound. Re-resolving is complete
-> by construction and measured at 212 ms on a 43k-edge graph. The node and edge shapes shown
+> by construction and measured at 129 ms on NPSP's 42,580-edge graph
+> ([artifact](measurements/npsp-incremental-profile.txt)). The node and edge shapes shown
 > here are still exactly what the in-memory graph holds.
 
 ```jsonc
@@ -705,9 +707,9 @@ amount of static analysis closes this. It has to be measured against the org.
 
 #### 9.3 `--verify-coverage`
 
-Opt-in pre-flight check against the target org, via the Tooling API. This is the one place
-`jsforce` earns its way into v1; `index` and `analyze` remain fully offline and never open a
-connection.
+Opt-in pre-flight check against the target org, via the Tooling API. This is the one place an org
+connection earns its way into v1, via `@salesforce/core`'s `Org.getConnection()`; `index`
+and `analyze` remain fully offline and never open a connection.
 
 1. Query `ApexCodeCoverageAggregate` for every class and trigger in the payload. Refuse to
    deploy, naming each offender and its figure, if any sits under 75%. The deploy would fail
@@ -741,30 +743,37 @@ figures, against named repositories at named commits.
 ### The incremental target, revised after measurement
 
 The 5-second target assumed the expensive part of an incremental index was the graph work.
-Profiling says otherwise. On NPSP (2,876 indexed files) the breakdown was:
+Profiling says otherwise. On NPSP (2,470 indexed files under `force-app`), one class changed
+([artifact](measurements/npsp-incremental-profile.txt)):
 
-| Stage | Time |
-| --- | --- |
-| read + hash every candidate file | **11,871 ms** |
-| walk the source tree | 1,253 ms |
-| load the previous index | 441 ms |
-| **resolve, globally** | **212 ms** |
-| serialise + stringify + write | 208 ms |
-| extract the changed files | 5 ms |
+| Stage | Time | Share |
+| --- | --- | --- |
+| read + sha256 every candidate file | **1,386 ms** | 56% |
+| load the previous index | 342 ms | 14% |
+| walk the source tree | 290 ms | 12% |
+| serialise + write | 221 ms | 9% |
+| **resolve, globally** | **129 ms** | 5% |
+| extract the one changed file | 91 ms | 4% |
 
 Global resolution — the thing the design traded away speed for, and the thing the README
-originally blamed — is **1.5%** of the cost. The floor is I/O: an incremental index must read
-every candidate file to prove it is unchanged, and on this hardware that is ~4 ms per file.
+originally blamed — is **5%** of the cost. The floor is I/O: an incremental index must read
+every candidate file to prove it is unchanged.
 
-Hashing raw bytes instead of decoding each file to UTF-8 and re-encoding it for the digest
-cut the total from 14.43 s to 5.98 s. Getting under 5 s from there needs the parallel file
-reading described in this section, which is **not implemented** — indexing is single-threaded.
+An earlier revision of this section quoted a different, much slower breakdown and a
+before/after pair for a hashing change. **Those numbers have been deleted: the artifacts
+behind them were overwritten and nothing in `docs/measurements/` reproduces them.** Getting
+below the target on a cold cache would still need the parallel file reading described in this
+section, which is **not implemented** — indexing is single-threaded.
 
-The target is therefore restated as: **under 5 s for an incremental index once file reading
-is parallelised; under 8 s single-threaded.** The measured 5.98 s meets the second and is
-0.98 s outside the first. The alternative — trusting size and mtime instead of hashing —
-would reach it easily and is deliberately rejected: a same-size edit with a preserved mtime
-would silently produce a stale fact, and a stale fact is a missing edge.
+The measured incremental index on NPSP is **1.85 s** (median of five fresh processes, warm
+filesystem cache — [artifact](measurements/npsp-timing.json)), which meets the 5-second
+target under those conditions. Cold-cache behaviour has not been measured, and the profile
+above shows the cost is dominated by reading every candidate file, so a cold cache will be
+slower by an unmeasured amount.
+
+The alternative — trusting size and mtime instead of hashing — would be faster still and is
+deliberately rejected: a same-size edit with a preserved mtime would silently produce a stale
+fact, and a stale fact is a missing edge.
 
 ### Complexity guarantees
 
@@ -883,8 +892,17 @@ The gap §5.5 claimed to close — `@AuraEnabled` methods invoked from outside t
 closed by entry-point taint (§6.3), not by this extractor. Its edges were tagged
 `provenance: regex`, and §11.2's ablation measured their contribution as **zero** on a real
 repository: they changed the selection on no commit. The extractor was therefore deleted
-rather than defended, exactly as this section said it should be. That is the measurement
-working as designed.
+rather than defended, exactly as this section said it should be.
+
+**Caveat on the evidence.** The ablation run that produced that zero was against a build that
+still had the extractor, and its artifact has since been overwritten by a later run. The
+current artifact ([apex-recipes-ablation.json](measurements/apex-recipes-ablation.json))
+shows `regex` at zero *edges*, which is a consequence of the deletion rather than evidence
+for it. The decision also rests on a structural argument that does not need a measurement —
+edges pointing UI → Apex cannot be traversed by a query that walks backwards — and that
+argument stands on its own. A second limitation, discovered later, is that ablating a
+provenance class removes edges but leaves the files *modelled*, so this measurement could
+never have shown the effect the deletion had on the fallback rate.
 
 Items 4, 6, 9, 10, 14 and 15 are why `maxReductionPercent` and `alwaysRun` exist. They are
 the honest floor of a static approach, and the README will say so.
@@ -913,9 +931,10 @@ src/
   bench/{run,adapters,ablation,                   # benchmark harness (not published)
          falseNegatives,report}.ts
   graph/{model,serialize,store,incremental}.ts
-  query/{changeSet,closure,selection,safety}.ts
+  query/{changeSet,closure,selection,safety,analyze}.ts
   config/{schema,load}.ts
   errors.ts                                       # typed errors naming the offending file
+  {types,version,paths,project}.ts                # shared types, version constants, helpers
 test/                                             # unit + fixture-based integration
 test/fixtures/sample-project/                     # a real, small sfdx project
 bench/
@@ -924,22 +943,25 @@ docs/DESIGN.md
 
 ### Dependencies
 
-CLAUDE.md requires justifying anything under ~1M weekly npm downloads. Figures measured
-2026-09-07:
+Anything under ~1M weekly npm downloads needs justifying. Figures re-queried from the npm
+downloads API on 2026-09-08 and retained at
+[`docs/measurements/dependency-downloads.txt`](measurements/dependency-downloads.txt):
 
 | Package | Version | Weekly downloads | Justification |
 | --- | --- | --- | --- |
 | `@apexdevtools/apex-parser` | 5.2.0 | 51,713 | The only maintained Apex grammar for JS. From Apex Dev Tools (also behind `apex-ls`), ANTLR-generated from the grammar lineage the ecosystem shares. The alternative is writing an Apex parser. One transitive dep (`antlr4@4.13.2`); engines `^20.19 \|\| ^22.13 \|\| >=24`. |
 | `@salesforce/sf-plugins-core` | 13.0.4 | 824,438 | Mandated by CLAUDE.md for `sf` v2 plugins; first-party Salesforce. |
 | `@salesforce/core` | 9.1.10 | — | First-party auth and connection resolution. |
-| `jsforce` | 3.10.25 | — | Tooling API for `deploy --verify-coverage` only (§9.3). First-party-adjacent, and already a transitive dep of `@salesforce/core`. |
+| `@jsforce/jsforce-node` | 3.10.25 (transitive) | — | Tooling API types for `deploy --verify-coverage` only (§9.3). **Not a declared dependency**: it arrives as `^3.10.24` via `@salesforce/core`, and the connection object is obtained from `Org.getConnection()` rather than by importing it. The package named plain `jsforce` is not in this tree. |
 | `fast-xml-parser` | 5.11.1 | 57.8M | Metadata XML. |
 | `yaml` | 2.9.0 | 176M | Config file. |
 | `picomatch` | 4.0.7 | 435M | Globs for `alwaysRun` / `excludeFromImpact`. |
 
-`jsforce` is loaded lazily, behind the `--verify-coverage` flag. `index` and `analyze` never
-import it and never open a connection: offline operation is a property worth preserving, and
-a dynamic import is what enforces it rather than a comment asking people to be careful.
+`@salesforce/core` is loaded lazily, behind the `--verify-coverage` flag — it is the only
+thing that opens a connection, and the Tooling API call goes through the connection it
+returns. `index` and `analyze` never import it: offline operation is a property worth
+preserving, and a dynamic import is what enforces it rather than a comment asking people to
+be careful.
 
 ### Module format and test runner
 
