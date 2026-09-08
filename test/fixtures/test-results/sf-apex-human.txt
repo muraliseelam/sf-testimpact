@@ -1,0 +1,24 @@
+TEST NAME                                                                                          OUTCOME  MESSAGE  RUNTIME (MS)
+─────────────────────────────────────────────────────────────────────────────────────────────────  ───────  ───────  ────────────
+PlatformCacheBuilderRecipes_Tests.testPlatformCacheBuilderRecipesPositiveColdCache                 Pass              550         
+PlatformCacheRecipes_Tests.testStoreValueInOrgCacheWithTTLPositive                                 Pass              5           
+PlatformCacheRecipes_Tests.testStoreValueInSessionCachePositive                                    Pass              4           
+PlatformCacheRecipes_Tests.testStoreValueInSessionCacheWithTTLPositive                             Pass              4           
+PlatformCacheRecipes_Tests.testGetValueFromOrgCacheNegativeNoValueForKey                           Pass              18          
+PlatformCacheRecipes_Tests.testGetValueFromOrgCachePositive                                        Pass              5           
+PlatformCacheRecipes_Tests.testGetValueFromSessionCacheNegativeNoValueForKey                       Pass              146         
+PlatformCacheRecipes_Tests.testGetValueFromSessionCachePositive                                    Pass              5           
+PlatformCacheRecipes_Tests.testRemoveKeyFromOrgCacheNegativeNoKey                                  Pass              5           
+PlatformCacheRecipes_Tests.testRemoveKeyFromOrgCachePositive                                       Pass              7           
+PlatformCacheRecipes_Tests.testRemoveKeyFromSessionCacheNegativeNoKey                              Pass              4           
+PlatformCacheRecipes_Tests.testRemoveKeyFromSessionCachePositive                                   Pass              5           
+=== Test Summary
+NAME                 VALUE                        
+───────────────────  ─────────────────────────────
+Outcome              Passed                       
+Tests Ran            331                          
+Pass Rate            100%                         
+Fail Rate            0%                           
+Skip Rate            0%                           
+Test Run Id          707D200003PpUFS              
+Test Setup Time      25189 ms                     

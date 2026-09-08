@@ -29,8 +29,10 @@ const JUNIT = `<?xml version="1.0" encoding="UTF-8"?>
 </testsuites>`;
 
 describe('adapter registry', () => {
-  it('registers both adapters by id', () => {
-    expect([...ADAPTERS.keys()].sort()).toEqual(['junit-xml', 'sf-json']);
+  it('registers every adapter by id', () => {
+    // `sf-human` joined the registry so real GitHub Actions logs can be ingested; public CI
+    // runs `sf apex test run -r human`, and its machine-readable output is never uploaded.
+    expect([...ADAPTERS.keys()].sort()).toEqual(['junit-xml', 'sf-human', 'sf-json']);
     expect(adapterById('sf-json')).toBe(sfJsonAdapter);
     expect(adapterById('nope')).toBeUndefined();
   });
