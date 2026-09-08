@@ -350,25 +350,16 @@ discussed above.
 The headline metric — does selection ever miss a test that would have caught a regression —
 **remains unmeasured**.
 
-Two independent attempts:
+Computing it requires per-commit historical Apex test results — the suite passing at `c^` and
+failing at `c`. Neither repository benchmarked here publishes those, and no public Salesforce
+repository was found that does. Generating them means running the full suite at every commit
+against a real org, which this project has never done.
 
-1. **Real repositories.** Computing it needs per-commit historical Apex test results (passed
-   at `c^`, failed at `c`). No public Salesforce repository publishes those, and generating
-   them means running the suite at every commit against a real org.
-2. **A purpose-built benchmark.** An adapter was written against `sfdb`, a synthetic
-   Salesforce change-impact benchmark with generator-recorded ground truth, registering
-   sf-testimpact as three selectors (one per `entryPointPolicy`). **The benchmark could not
-   execute.** Its own label-neutrality guard rejects every generated suite: the generator
-   emits `<required>false</required>` — a standard `CustomField` attribute — into public
-   metadata, and the guard treats the bare word `required` as a leaked scenario-family token,
-   aborting the run. Reproduced on seeds 11, 23 and 37, and **with the benchmark's own
-   `select-none` baseline**, so it is a defect in the benchmark rather than an
-   incompatibility with this tool. Fixing it would mean weakening a control that exists to
-   protect the benchmark's central claim, which is not a change to make from outside. The
-   adapter is retained at [`bench/sfdb-adapter.mjs`](bench/sfdb-adapter.mjs) and is ready to
-   run if the guard is corrected.
+A search for an existing public benchmark for Salesforce change-impact test selection turned
+up nothing usable as a substitute. Building one, with generator-recorded ground truth, is
+open work that this project has not done.
 
-Until one of those lands, **treat every reduction figure above as a claim about speed only.
+Until that measurement lands, **treat every reduction figure above as a claim about speed only.
 Nothing here is evidence about safety.**
 
 ### Ablation: what each part of the graph costs
