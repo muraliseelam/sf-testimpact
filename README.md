@@ -418,6 +418,13 @@ A search for an existing public benchmark for Salesforce change-impact test sele
 up nothing usable as a substitute. Building one, with generator-recorded ground truth, is
 open work that this project has not done.
 
+How it would be measured, what data that needs, and which harness pieces already exist, are
+specified in [docs/CORRECTNESS-PLAN.md](docs/CORRECTNESS-PLAN.md). Two findings from writing
+it are worth stating here: public CI for apex-recipes does run Apex tests, but the job was
+**skipped on 25 of the 25 most recent PR runs** (it needs org credentials), and the one
+retained run that did execute reports a **100% pass rate** — a metric whose numerator is
+failures cannot be built from repositories selected for not having any.
+
 Until that measurement lands, **treat every reduction figure above as a claim about speed only.
 Nothing here is evidence about safety.**
 

@@ -99,6 +99,72 @@ export const sfJsonAdapter: TestResultAdapter = {
 };
 
 // ---------------------------------------------------------------------------------------
+// `sf apex test run -r human`
+// ---------------------------------------------------------------------------------------
+
+/**
+ * The human-readable table `sf apex test run -r human` prints.
+ *
+ * This format exists as an adapter because it is the one public CI actually produces. The
+ * apex-recipes workflow runs `sf apex test run -c -r human -d ./tests/apex -w 20`, and the
+ * per-test outcomes survive only in the GitHub Actions log — the machine-readable files go
+ * to a directory that is never uploaded as an artifact. Parsing the human table is therefore
+ * the difference between being able to use that history and not.
+ *
+ * Columns are whitespace-aligned, not delimited, and the MESSAGE column is empty for a
+ * passing test and free text (which can itself contain runs of spaces) for a failing one.
+ * So the row is anchored from both ends: the name is the first token, the outcome is the
+ * first Pass/Fail/Skip token after it, and the duration is a trailing integer if present.
+ * Anything between outcome and duration is the message.
+ */
+const HUMAN_ROW = /^(\S+)\s+(Pass|Fail|Skip)\b\s*(.*?)\s*(\d+)?\s*$/;
+
+export const sfHumanAdapter: TestResultAdapter = {
+  id: 'sf-human',
+
+  detect(contents) {
+    return /^TEST NAME\s+OUTCOME\b/m.test(contents);
+  },
+
+  parse(contents) {
+    const results: TestOutcome[] = [];
+    let inTable = false;
+
+    for (const raw of contents.split(/\r?\n/)) {
+      const line = raw.trimEnd();
+      if (/^TEST NAME\s+OUTCOME\b/.test(line)) {
+        inTable = true;
+        continue;
+      }
+      if (!inTable) continue;
+      // The summary block ends the per-test table.
+      if (line.startsWith('=== ')) break;
+      if (line.trim() === '') continue;
+      // The box-drawing separator under the header.
+      if (/^[\s\u2500-\u257F-]+$/.test(line)) continue;
+
+      const match = HUMAN_ROW.exec(line);
+      if (match === null) continue;
+      const [, fullName, outcome, , duration] = match;
+      if (fullName === undefined || outcome === undefined) continue;
+
+      const dot = fullName.indexOf('.');
+      // A row without `Class.method` is not a test row; skipping beats inventing a name.
+      if (dot <= 0) continue;
+
+      results.push({
+        className: fullName.slice(0, dot),
+        methodName: fullName.slice(dot + 1),
+        outcome: normaliseOutcome(outcome),
+        durationMs: duration === undefined ? null : Number(duration),
+      });
+    }
+
+    return { commit: null, results };
+  },
+};
+
+// ---------------------------------------------------------------------------------------
 // JUnit XML
 // ---------------------------------------------------------------------------------------
 
@@ -172,6 +238,7 @@ export const junitXmlAdapter: TestResultAdapter = {
 export const ADAPTERS: ReadonlyMap<string, TestResultAdapter> = new Map([
   [sfJsonAdapter.id, sfJsonAdapter],
   [junitXmlAdapter.id, junitXmlAdapter],
+  [sfHumanAdapter.id, sfHumanAdapter],
 ]);
 
 export function adapterById(id: string): TestResultAdapter | undefined {
