@@ -1,0 +1,20 @@
+INCREMENTAL INDEX PROFILE — C:/t/npsp
+  loadGraph (parse + resolve)            342.0 ms
+  walk source tree                       290.1 ms
+  read + sha256 every file              1385.7 ms
+  planReindex (diff hashes)                2.8 ms
+     -> 1 file(s) to re-extract, 2469 unchanged
+  extract changed files                   91.4 ms
+  mergeFacts                               0.5 ms
+  mergeFiles                               0.4 ms
+  resolve (GLOBAL)                       128.8 ms
+     -> 7436 nodes, 42580 edges
+  serializeGraph                          31.6 ms
+  JSON.stringify                          29.2 ms
+     -> 8.25 MiB
+  write to disk                          160.5 ms
+
+  loadGraph breakdown:
+    JSON.parse only                       25.4 ms
+
+  DOMINANT: resolve=129ms  load=342ms  serialize=32ms  stringify=29ms  parse=25ms

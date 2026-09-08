@@ -1,0 +1,6 @@
+commits analysed: 30
+after +none       commits blocked by unmodelled-in-source: 27/30 (90.0%)  top: {".cls-meta.xml":769,".md":457,".dwl-meta.xml":47,".js-meta.xml":45,".trigger-meta.xml":18}
+after +outside    commits blocked by unmodelled-in-source: 27/30 (90.0%)  top: {".cls-meta.xml":769,".md":457,".dwl-meta.xml":47,".js-meta.xml":45,".trigger-meta.xml":18}
+after +companion  commits blocked by unmodelled-in-source: 26/30 (86.7%)  top: {".md":457,".dwl-meta.xml":47,".js-meta.xml":45,".dwl":17,".js":10}
+after +staticres  commits blocked by unmodelled-in-source: 12/30 (40.0%)  top: {".dwl-meta.xml":47,".js-meta.xml":45,".dwl":17,".js":10,".json":7}
+after +dataweave  commits blocked by unmodelled-in-source: 12/30 (40.0%)  top: {".js-meta.xml":45,".js":10,".json":7,".html":7,".css":3}

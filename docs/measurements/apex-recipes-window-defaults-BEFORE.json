@@ -1,0 +1,81 @@
+{
+  "label": "apex-recipes",
+  "repo": "C:/t/ar",
+  "hardware": {
+    "cpus": 12,
+    "model": "Intel(R) Core(TM) 5 120U",
+    "memGB": 8
+  },
+  "head": "87c1c9b674de15870e546b862fa93fbd04a4e130",
+  "headDate": "2026-09-03T00:05:45Z",
+  "fullIndexMs": 1776.6532,
+  "indexedFiles": 221,
+  "extracted": 221,
+  "nodes": 652,
+  "edges": 1080,
+  "taints": 40,
+  "unparseable": 0,
+  "graphBytes": 367129,
+  "edgesByProvenance": {
+    "ast": 903,
+    "xml": 172,
+    "regex": 5
+  },
+  "nodesByKind": {
+    "apex": 355,
+    "apexInner": 51,
+    "flow": 1,
+    "label": 1,
+    "ui": 18,
+    "sobject": 35,
+    "field": 178,
+    "permset": 10,
+    "trigger": 3
+  },
+  "testClasses": 68,
+  "incrementalIndexMs": 112.2637,
+  "incrementalReExtracted": 1,
+  "incrementalReused": 220,
+  "loadMs": 8.9781,
+  "window": {
+    "commits": 30,
+    "analyzeMeanMs": 0.7159000000000001,
+    "fallbacks": 30,
+    "fallbackRatePercent": 100,
+    "meanReductionSelectedOnly": null,
+    "overallReductionPercent": 0,
+    "totalSelected": 1896,
+    "totalAvailable": 1896,
+    "fallbackRules": {
+      "unmodelled-file-type": 27,
+      "entry-point-policy-full": 3
+    },
+    "unmodelledExtensions": {
+      ".cls-meta.xml": 5,
+      ".json": 1,
+      ".yml": 5,
+      ".css": 1,
+      ".md": 12,
+      ".apex": 1,
+      ".namedCredential-meta.xml": 1,
+      ".sh": 1
+    },
+    "fallbackSubjects": [
+      "unmodelled-file-type: force-app/main/default/classes/Async Apex Recipes/AtFutureRecipes.cls-meta.xml",
+      "entry-point-policy-full: QueueableWithCalloutRecipes",
+      "unmodelled-file-type: force-app/main/default/lwc/.eslintrc.json",
+      "unmodelled-file-type: .github/workflows/ci-pr-prerelease.yml",
+      "unmodelled-file-type: .github/workflows/ci-pr-prerelease.yml",
+      "unmodelled-file-type: .github/workflows/ci-pr.yml",
+      "unmodelled-file-type: force-app/main/default/lwc/formattedDocsViewer/formattedDocsViewer.css",
+      "unmodelled-file-type: .github/workflows/ci.yml",
+      "unmodelled-file-type: force-app/main/default/staticresources/documentation/ApexClassUtilities.md",
+      "unmodelled-file-type: force-app/main/default/staticresources/documentation/ApexClassUtilities.md",
+      "unmodelled-file-type: force-app/main/default/staticresources/documentation/AccountServiceLayer.md",
+      "unmodelled-file-type: force-app/main/default/staticresources/documentation/AtFutureRecipes.md"
+    ]
+  },
+  "excludeFromImpact": [],
+  "falseNegatives": null,
+  "falseNegativesReason": "Not measurable: computing it requires per-commit historical Apex test results (passed at c^, failed at c). No public Salesforce repository publishes those, and producing them would require running each commit against a real org."
+}

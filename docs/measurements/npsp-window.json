@@ -1,0 +1,77 @@
+{
+  "label": "SalesforceFoundation/NPSP",
+  "repo": "C:/t/npsp",
+  "hardware": {
+    "cpus": 12,
+    "model": "Intel(R) Core(TM) 5 120U",
+    "memGB": 8
+  },
+  "head": "1e9e61908707e00faaef9f25982a85409d4b93e3",
+  "headDate": "2026-09-02T12:37:11-07:00",
+  "fullIndexMs": 143687.0319,
+  "indexedFiles": 2884,
+  "extracted": 2884,
+  "nodes": 7750,
+  "edges": 43474,
+  "taints": 1871,
+  "unparseable": 4,
+  "graphBytes": 8770875,
+  "edgesByProvenance": {
+    "ast": 17030,
+    "xml": 17059,
+    "regex": 1491,
+    "widened": 7894
+  },
+  "nodesByKind": {
+    "apex": 2774,
+    "apexInner": 725,
+    "label": 2061,
+    "sobject": 96,
+    "field": 1185,
+    "ui": 303,
+    "permset": 580,
+    "trigger": 26
+  },
+  "testClasses": 397,
+  "incrementalIndexMs": 12823.6439,
+  "incrementalReExtracted": 1,
+  "incrementalReused": 2883,
+  "loadMs": 3143.0896,
+  "window": {
+    "commits": 6,
+    "analyzeMeanMs": 276.0297166666667,
+    "fallbacks": 2,
+    "fallbackRatePercent": 33.33333333333333,
+    "meanReductionSelectedOnly": 12.027707808564232,
+    "overallReductionPercent": 8.018471872376153,
+    "totalSelected": 2191,
+    "totalAvailable": 2382,
+    "fallbackRules": {
+      "unmodelled-file-type": 1,
+      "changed-file-not-in-index": 1
+    },
+    "unmodelledExtensions": {
+      ".robot": 1
+    },
+    "fallbackSubjects": [
+      "unmodelled-file-type: robot/Cumulus/tests/browser/contacts_accounts/create_household.robot",
+      "changed-file-not-in-index: force-app/main/default/lwc/accordionSection/accordionSection.html"
+    ]
+  },
+  "excludeFromImpact": [
+    "**/*.md",
+    "**/*.yml",
+    "**/*.yaml",
+    "**/*.json",
+    ".github/**",
+    "**/*.css",
+    "**/*.sh",
+    "**/*.apex",
+    "**/staticresources/**",
+    "**/*.cls-meta.xml",
+    "**/*.trigger-meta.xml"
+  ],
+  "entryPointPolicy": "widen",
+  "falseNegatives": null,
+  "falseNegativesReason": "Not measurable: computing it requires per-commit historical Apex test results (passed at c^, failed at c). No public Salesforce repository publishes those, and producing them would require running each commit against a real org."
+}

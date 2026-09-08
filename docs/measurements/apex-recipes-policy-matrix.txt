@@ -1,0 +1,3 @@
+policy=full  fallback%: 100.0  overallReduction%:   0.0  meanRed(sel)%: n/a  rules: {'unmodelled-file-type': 6, 'entry-point-policy-full': 18, 'changed-file-not-in-index': 6}
+policy=widen  fallback%:  40.0  overallReduction%:  29.4  meanRed(sel)%: 49.1  rules: {'unmodelled-file-type': 6, 'changed-file-not-in-index': 6}
+policy=strict  fallback%:  40.0  overallReduction%:  29.7  meanRed(sel)%: 49.7  rules: {'unmodelled-file-type': 6, 'changed-file-not-in-index': 6}
