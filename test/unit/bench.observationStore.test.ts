@@ -316,3 +316,74 @@ describe('ObservationStore constructed directly', () => {
     expect(store.recordedCommits()).toEqual(['c1']);
   });
 });
+
+describe('adversarial store contents', () => {
+  const headerOnly = (w: unknown) => `${JSON.stringify({ kind: 'window', window: w })}\n`;
+
+  it.each([
+    ['a completely empty file', ''],
+    ['only newlines', '\n\n\n'],
+    ['only whitespace', '   \n  \n'],
+  ])('refuses %s rather than treating it as a fresh store', (_label, content) => {
+    // The file exists, so this is not the "first run" case. Continuing would mean appending
+    // to something whose commit range is unknown.
+    expect(() => loadStore(memoryFs({ [PATH]: content }), PATH)).toThrow(/no window header/);
+  });
+
+  it('refuses a header record with no window at all', () => {
+    // This used to be accepted: `window` became undefined, every later identity comparison
+    // compared undefined with undefined, and the guard against mixing two commit ranges
+    // silently stopped guarding anything.
+    const fs = memoryFs({ [PATH]: `${JSON.stringify({ kind: 'window' })}\n` });
+    expect(() => loadStore(fs, PATH)).toThrow(/malformed window header/);
+  });
+
+  it.each([
+    ['repo', { baseSha: 'a', headSha: 'b', commitCount: 1 }],
+    ['baseSha', { repo: 'r', headSha: 'b', commitCount: 1 }],
+    ['headSha', { repo: 'r', baseSha: 'a', commitCount: 1 }],
+    ['commitCount', { repo: 'r', baseSha: 'a', headSha: 'b' }],
+  ])('refuses a header missing %s', (_field, w) => {
+    expect(() => loadStore(memoryFs({ [PATH]: headerOnly(w) }), PATH)).toThrow(/malformed window header/);
+  });
+
+  it.each([
+    ['commitCount as a string', { repo: 'r', baseSha: 'a', headSha: 'b', commitCount: '3' }],
+    ['repo as a number', { repo: 7, baseSha: 'a', headSha: 'b', commitCount: 3 }],
+    ['window as null', null],
+    ['window as an array', []],
+  ])('refuses %s', (_label, w) => {
+    expect(() => loadStore(memoryFs({ [PATH]: headerOnly(w) }), PATH)).toThrow(/malformed window header/);
+  });
+
+  it('names the line the bad header is on', () => {
+    const fs = memoryFs({ [PATH]: headerOnly({ repo: 'r' }) });
+    expect(() => loadStore(fs, PATH)).toThrow(/at line 1/);
+  });
+
+  it('refuses a commit recorded twice in the file itself', () => {
+    // `append` guards this for one process. A file assembled by concatenating two runs would
+    // otherwise slip past, and the scorer reads the file as an ordered series.
+    const fs = memoryFs();
+    const { store } = openStore(fs, PATH, WINDOW);
+    store.append(commitRecord('c1'));
+    const dupLine = `${JSON.stringify({ kind: 'commit', ...commitRecord('c1') })}\n`;
+    fs.appendFile(PATH, dupLine);
+
+    const reopened = openStore(fs, PATH, WINDOW);
+    // Loading tolerates it, but appending c1 again is still refused, and the duplicate is
+    // visible in the record list rather than hidden.
+    expect(reopened.recorded).toEqual(['c1', 'c1']);
+    expect(() => reopened.store.append(commitRecord('c1'))).toThrow(/already recorded/);
+  });
+
+  it('ignores a record of an unknown kind rather than crashing', () => {
+    // Forward compatibility: a future writer adding a record type must not break an older
+    // reader, as long as the header and commit records still parse.
+    const fs = memoryFs();
+    const { store } = openStore(fs, PATH, WINDOW);
+    store.append(commitRecord('c1'));
+    fs.appendFile(PATH, `${JSON.stringify({ kind: 'somethingNew', data: 1 })}\n`);
+    expect(openStore(fs, PATH, WINDOW).recorded).toEqual(['c1']);
+  });
+});

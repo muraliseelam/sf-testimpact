@@ -57,6 +57,43 @@ this instead of its true cause:
 gh label create semantic-release --color d4c5f9 --description "Automated release failure reports"
 ```
 
+## Trusted Publishing (OIDC) — prepared, not yet switched on
+
+The workflow is ready for npm Trusted Publishing. Nothing needs to change in this repository
+to enable it; the remaining step is on npmjs.com, and it is one setting.
+
+**Why bother.** Releases have failed on token problems more than once — a granular token that
+`npm whoami` rejects, and a token that could not bypass 2FA (`EOTP`). Trusted Publishing
+removes the credential entirely: GitHub mints a short-lived OIDC token for the workflow run,
+npm verifies it came from this repository and this workflow, and no long-lived secret exists
+to expire, leak or be scoped wrongly.
+
+**What is already in place**
+
+- `permissions: id-token: write` on the release job.
+- npm is raised to `^11` before `npm ci`; the OIDC exchange needs npm >= 11.5.1, and an old
+  npm fails it in a way that looks like a bad token.
+- `@semantic-release/npm` already attempts OIDC first. Today it reports
+  `OIDC token exchange with the npm registry failed: 404 - package not found` and falls back
+  to `NPM_TOKEN`, which is why releases still work.
+
+**The remaining step, on npmjs.com**
+
+1. Open the `sf-testimpact` package → **Settings** → **Trusted Publisher**.
+2. Choose **GitHub Actions**, and enter:
+   - Organization or user: `muraliseelam`
+   - Repository: `sf-testimpact`
+   - Workflow filename: `release.yml`
+3. Save.
+
+The next release run will then exchange the OIDC token successfully and publish without the
+secret.
+
+**Do not delete `NPM_TOKEN` before that run succeeds.** Both paths are deliberately live: the
+token keeps releases working until OIDC takes over, and OIDC is attempted first, so switching
+on the npm setting is sufficient to cut over. Once a release has published via OIDC, the
+secret can be deleted and the `NPM_TOKEN` lines removed from the workflow.
+
 ## Verifying a release candidate locally
 
 ```powershell

@@ -157,7 +157,7 @@ export function loadStore(fs: AppendOnlyFileSystem, path: string): StoreContents
       );
     }
 
-    if (record.kind === 'window') window = record.window;
+    if (record.kind === 'window') window = validateWindow(record.window, path, index + 1);
     else if (record.kind === 'commit') {
       const { kind, ...rest } = record;
       void kind;
@@ -173,6 +173,34 @@ export function loadStore(fs: AppendOnlyFileSystem, path: string): StoreContents
   }
 
   return { window, commits, truncatedTailDiscarded };
+}
+
+/**
+ * Check a header actually carries a usable window.
+ *
+ * A header record that parses as JSON but has no `window`, or one with a missing field, used
+ * to be accepted: `window` became `undefined`, every subsequent identity comparison compared
+ * undefined against undefined, and the guard that exists to stop two commit ranges being
+ * mixed silently stopped guarding anything. A malformed header is refused instead.
+ */
+function validateWindow(value: unknown, path: string, line: number): WindowIdentity {
+  const w = value as Partial<WindowIdentity> | undefined;
+  const bad =
+    w === undefined ||
+    w === null ||
+    typeof w.repo !== 'string' ||
+    typeof w.baseSha !== 'string' ||
+    typeof w.headSha !== 'string' ||
+    typeof w.commitCount !== 'number';
+
+  if (bad) {
+    throw new Error(
+      `Observation store ${path} has a malformed window header at line ${line}. It must carry ` +
+        'repo, baseSha, headSha and commitCount; without them the guard against mixing two ' +
+        'commit windows cannot work.',
+    );
+  }
+  return { repo: w.repo, baseSha: w.baseSha, headSha: w.headSha, commitCount: w.commitCount };
 }
 
 export interface OpenResult {
