@@ -38,12 +38,12 @@ one that cannot proceed without them.
 
 ## 4. Wire to the scorer and report
 
-- [ ] 4.1 Feed stored observations to the existing `falseNegatives.ts`. Do not modify it.
-- [ ] 4.2 Emit a report carrying false-negative count, denominator, fallback rate, reduction,
+- [x] 4.1 Feed stored observations to the existing `falseNegatives.ts`. Do not modify it.
+- [x] 4.2 Emit a report carrying false-negative count, denominator, fallback rate, reduction,
       flaky count, excluded commits with reasons, and a per-policy breakdown.
-- [ ] 4.3 Suppress the rate and emit raw counts plus "not measurable from this data" when the
+- [x] 4.3 Suppress the rate and emit raw counts plus "not measurable from this data" when the
       denominator is below 30.
-- [ ] 4.4 Unit tests for both the sufficient and insufficient denominator paths.
+- [x] 4.4 Unit tests for both the sufficient and insufficient denominator paths.
 
 ## 5. Execute (requires org credentials)
 
@@ -55,7 +55,7 @@ one that cannot proceed without them.
 
 ## 6. Validation
 
-- [ ] 6.1 `npm run check` passes with all new tests.
-- [ ] 6.2 No credential appears in any file under `docs/measurements/`.
-- [ ] 6.3 Every number added to the README traces to `docs/measurements/false-negative-rate.json`,
+- [x] 6.1 `npm run check` passes with all new tests.
+- [x] 6.2 No credential appears in any file under `docs/measurements/`.
+- [x] 6.3 Every number added to the README traces to `docs/measurements/false-negative-rate.json`,
       per the evidence rule recorded in `docs/AUDIT.md`.
