@@ -181,8 +181,14 @@ Single-threaded — the worker pool in the design is not implemented.
 how the tool is invoked: `sf testimpact index` pays module load, ANTLR parser construction
 and a cold JIT every time. Five runs per figure; the table gives the median and the observed
 range. The filesystem cache is **warm** and is not dropped between runs — dropping the
-Windows page cache needs privileges the harness does not assume — so a first index after a
-fresh clone will be slower than these figures. See
+Windows page cache needs privileges the harness does not assume.
+
+**Your first run will be slower than this table**, and by more than a little. These figures
+exclude `sf` CLI startup and assume a warm cache. A cold first `sf testimpact index` on NPSP,
+measured during
+[external user testing](docs/USER-TESTING.md#c1-the-incremental-index-is-genuinely-faster),
+took **73 s** against the 20.5 s below; the second run on the same tree took 12.9 s. Treat the
+table as the steady-state cost, not the first-use cost. See
 [the comparability note](#a-note-on-comparability-with-earlier-figures) before comparing
 against any previously published number.
 

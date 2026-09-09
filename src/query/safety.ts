@@ -174,7 +174,7 @@ export function applyEntryPointPolicy(
             message:
               `${first.name} is ${categories}, so its callers may live outside this repository ` +
               'and the graph’s inbound edges to it are incomplete.' +
-              (others > 0 ? ` ${others} other impacted entry point(s): ${names.slice(1).join(', ')}.` : ''),
+              (others > 0 ? ` ${others} other impacted entry point(s): ${summariseNames(names.slice(1))}` : ''),
             hint:
               '`entryPointPolicy: widen` selects only the tests that reach an entry point of the ' +
               'same kind. Faster, but it assumes no unindexed caller reaches ' +
@@ -231,6 +231,23 @@ export function applyEntryPointPolicy(
         ],
       };
   }
+}
+
+/**
+ * How many names a message prints before summarising.
+ *
+ * The full list is what a reader needs to decide whether `entryPointPolicy: widen` is safe,
+ * so it is never discarded - `decision.subjects` still carries every name, and `--json`
+ * exposes it. But a large project has enough entry points to make the prose useless: NPSP
+ * produced 131 in one line, which buried the rule and the count it was supposed to
+ * communicate. The prose is capped; the data is not.
+ */
+const NAME_PREVIEW_LIMIT = 8;
+
+function summariseNames(names: readonly string[]): string {
+  if (names.length <= NAME_PREVIEW_LIMIT) return `${names.join(', ')}.`;
+  const shown = names.slice(0, NAME_PREVIEW_LIMIT).join(', ');
+  return `${shown}, and ${names.length - NAME_PREVIEW_LIMIT} more (full list in \`--json\`).`;
 }
 
 function describeCategories(kinds: readonly EntryPointKind[]): string {

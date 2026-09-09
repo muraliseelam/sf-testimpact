@@ -253,10 +253,10 @@ readable.
 
 | # | Finding | Severity | Fixed |
 | --- | --- | --- | --- |
-| C2 | Entry-point fallback prints all 131 entry points inline, twice, on NPSP | **High** — output unusable on large repos | Yes, commit after this one |
-| A2 | `sf plugins install <tarball>` fails; the `file:` form exits 13 silently and installs nothing | Medium — the packaged artifact cannot be installed, and one failure mode is silent | Documented, not code-fixable here |
-| A3 | Quickstart on a fresh clone reports "Selected 0 of 68 tests (100.0% skipped)" for an empty diff | Medium — misleading first impression | Yes |
-| C1 | README quotes a 20.5 s full index; a cold first run on NPSP takes ~73 s | Low — the README states its conditions, but the gap is large | Yes, expectation note |
+| C2 | Entry-point fallback prints all 131 entry points inline, twice, on NPSP | **High** — output unusable on large repos | **Fixed** — prose capped at 8 names; message 446 chars, all 131 still in `--json` |
+| A2 | `sf plugins install <tarball>` fails; the `file:` form exits 13 silently and installs nothing | Medium — the packaged artifact cannot be installed, and one failure mode is silent | **Not fixed** — this is `sf plugins install` behaviour, not this plugin's. Recorded here so it is known. |
+| A3 | Quickstart on a fresh clone reports "Selected 0 of 68 tests (100.0% skipped)" for an empty diff | Medium — misleading first impression | **Fixed** — an empty diff now says so explicitly and states it is not a reduction |
+| C1 | README quotes a 20.5 s full index; a cold first run on NPSP takes ~73 s | Low — the README states its conditions, but the gap is large | **Fixed** — README now gives the cold first-run figure |
 | — | `sf testimpact deploy` | Untested — needs an org | No |
 
 Nothing in this session produced a false-negative measurement; no org was available and none
