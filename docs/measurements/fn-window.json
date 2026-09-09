@@ -1,0 +1,99 @@
+{
+  "selected": null,
+  "conclusion": "No suitable public measurement window was found. No commit window is selected, and task 5 cannot proceed on public CI history alone.",
+  "searchedAt": "2026-09-09T04:50:03.300Z",
+  "method": {
+    "survey": "node docs/measurements/fn-window-search.mjs --gh <gh> --limit 30",
+    "surveyArtifact": "docs/measurements/fn-window-search.json",
+    "manualInspection": "gh run view <runId> --repo <repo> --log-failed, for every run whose Apex-test job concluded failure"
+  },
+  "whatWasRequired": "A public Salesforce repository whose history contains Apex tests that PASSED at c^ and FAILED at c. Those pairs are the numerator of the false-negative rate.",
+  "repositoriesChecked": [
+    {
+      "repo": "trailheadapps/apex-recipes",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexTestJobsPresent": 32,
+      "apexTestJobsExecuted": 16,
+      "apexTestJobsFailed": 3,
+      "note": null
+    },
+    {
+      "repo": "trailheadapps/dreamhouse-lwc",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexTestJobsPresent": 18,
+      "apexTestJobsExecuted": 9,
+      "apexTestJobsFailed": 0,
+      "note": null
+    },
+    {
+      "repo": "trailheadapps/ebikes-lwc",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexTestJobsPresent": 22,
+      "apexTestJobsExecuted": 11,
+      "apexTestJobsFailed": 0,
+      "note": null
+    },
+    {
+      "repo": "trailheadapps/lwc-recipes",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexTestJobsPresent": 18,
+      "apexTestJobsExecuted": 9,
+      "apexTestJobsFailed": 0,
+      "note": null
+    },
+    {
+      "repo": "trailheadapps/coral-cloud",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexTestJobsPresent": 48,
+      "apexTestJobsExecuted": 36,
+      "apexTestJobsFailed": 6,
+      "note": null
+    },
+    {
+      "repo": "trailheadapps/automation-components",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexTestJobsPresent": 12,
+      "apexTestJobsExecuted": 8,
+      "apexTestJobsFailed": 1,
+      "note": null
+    },
+    {
+      "repo": "trailheadapps/easy-spaces-lwc",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexTestJobsPresent": 26,
+      "apexTestJobsExecuted": 13,
+      "apexTestJobsFailed": 3,
+      "note": null
+    },
+    {
+      "repo": "SalesforceFoundation/NPSP",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexTestJobsPresent": 0,
+      "apexTestJobsExecuted": 0,
+      "apexTestJobsFailed": 0,
+      "note": null
+    }
+  ],
+  "findings": [
+    "Job names were matched with /scratch|apex|test/i, which also matches the lint/jest job `format-lint-lwc-tests`. Every failure in apex-recipes, automation-components and easy-spaces-lwc was that job, not an Apex test job.",
+    "The only failing Apex-test jobs in the surveyed window were 4 runs of trailheadapps/coral-cloud scratch-org-test: 28972701191, 28972033224, 28944423511, 28939823573.",
+    "All four were inspected individually. All four failed during metadata deployment (Component Failures: FlexiPage Experience_Record_Page and Flow PersonalizedSchedule) and never reached the Run Apex tests step. None contains a Test Summary block. They therefore contain zero Apex test outcomes of any kind.",
+    "Across every repository surveyed, the number of runs containing a failing Apex TEST (as opposed to a failing job) is zero.",
+    "trailheadapps/apex-recipes was already measured at a 100% pass rate (docs/measurements, and docs/CORRECTNESS-PLAN.md 3a). This survey did not change that.",
+    "SalesforceFoundation/NPSP exposes no GitHub Actions runs with an Apex test job; its CI runs elsewhere, so its results are not reachable by this method."
+  ],
+  "limitations": [
+    "GitHub Actions retains run history for a limited window (90 days by default). This survey observes only recent history and cannot see older failures.",
+    "Only the 30 most recent runs per repository were inspected.",
+    "A repository could contain Apex test failures that never ran in GitHub Actions at all."
+  ],
+  "consequence": "Task 1.3 applies: the finding is recorded and no synthetic window is substituted. Tasks 2-4 build the harness; task 5 remains blocked on both an org and a window with a real numerator."
+}
