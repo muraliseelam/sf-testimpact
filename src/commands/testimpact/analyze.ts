@@ -73,6 +73,23 @@ export default class TestImpactAnalyze extends SfCommand<AnalyzeJson> {
   private render(json: AnalyzeJson, hasDecisions: boolean): void {
     this.log(`Changed files: ${json.changedFiles}  (${json.range.base}...${json.range.head})`);
 
+    // An empty change set is not a 100% reduction, and saying "Selected 0 of 68 tests
+    // (100.0% skipped)" invites reading it as one. It is the answer a newcomer gets by
+    // following the quickstart literally on a fresh clone, where HEAD is the base branch, so
+    // the first impression of the tool is a headline number that means nothing.
+    if (json.changedFiles === 0) {
+      this.log('');
+      this.log(
+        `No files changed between ${json.range.base} and ${json.range.head}, so there is ` +
+          'nothing to select. This is not a reduction.',
+      );
+      this.log(
+        `  If you meant to compare a branch, check out that branch first, or pass ` +
+          '--base and --head explicitly.',
+      );
+      return;
+    }
+
     if (hasDecisions) {
       this.log('');
       for (const line of formatDecisions(
@@ -100,9 +117,13 @@ export default class TestImpactAnalyze extends SfCommand<AnalyzeJson> {
           `With \`entryPointPolicy: ${c.policy}\` this change set would select ` +
             `${c.wouldSelect} of ${c.totalTests} tests (${c.reductionPercent}% skipped).`,
         );
-        this.log(
-          `  That assumes nothing outside this repository calls: ${c.assumesNoExternalCallerOf.join(', ')}`,
-        );
+        // Same cap as the fallback message, for the same reason: on a large project this
+        // list runs to over a hundred names and buries the number above it. `--json` carries
+        // the whole list for anyone who needs to audit it.
+        const names = c.assumesNoExternalCallerOf;
+        const shown = names.slice(0, 8).join(', ');
+        const rest = names.length > 8 ? `, and ${names.length - 8} more (full list in \`--json\`)` : '';
+        this.log(`  That assumes nothing outside this repository calls: ${shown}${rest}`);
       }
     } else {
       this.log(
