@@ -1,6 +1,6 @@
 {
   "name": "sf-testimpact",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Test-impact analysis for Salesforce: run only the Apex tests a change set can affect.",
   "license": "MIT",
   "author": "Murali Seelam",
