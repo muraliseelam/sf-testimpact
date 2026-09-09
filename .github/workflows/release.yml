@@ -23,7 +23,7 @@ jobs:
       contents: write # semantic-release commits the changelog and pushes the tag
       issues: write # release notes are posted to related issues
       pull-requests: write
-      id-token: write # npm provenance
+      id-token: write # npm provenance, and the OIDC token for Trusted Publishing
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,6 +36,22 @@ jobs:
           node-version: '24'
           cache: npm
           registry-url: https://registry.npmjs.org
+
+      # npm Trusted Publishing (OIDC) needs npm >= 11.5.1. The runner's bundled npm tracks the
+      # Node release and is not guaranteed to be new enough, so it is raised explicitly rather
+      # than left to chance - an old npm makes the OIDC exchange fail in a way that looks like
+      # a bad token.
+      #
+      # This is the workflow half of the cutover only. Until a trusted publisher is configured
+      # for the package on npmjs.com, @semantic-release/npm tries OIDC, gets
+      # "404 OIDC token exchange error - package not found", and falls back to NPM_TOKEN.
+      # Both paths are live on purpose: the token keeps releases working today, and the moment
+      # the npm-side setting is switched on, OIDC wins and the token becomes dead weight that
+      # can then be deleted. See RELEASING.md.
+      - name: Ensure npm supports Trusted Publishing
+        run: |
+          npm install -g npm@^11
+          echo "npm $(npm --version)"
 
       - run: npm ci
 
