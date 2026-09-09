@@ -26,14 +26,14 @@ one that cannot proceed without them.
 
 ## 3. Org execution driver
 
-- [ ] 3.1 Add `src/bench/execute.ts` exposing a driver that takes a commit window, a deploy
+- [x] 3.1 Add `src/bench/execute.ts` exposing a driver that takes a commit window, a deploy
       function and a test-run function, all injected.
-- [ ] 3.2 For each commit: reconstruct the tree via the existing `measure.mjs` replay, deploy,
+- [x] 3.2 For each commit: reconstruct the tree via the existing `measure.mjs` replay, deploy,
       run the **full** suite, parse via `sfJsonAdapter`, persist.
-- [ ] 3.3 On deploy or run failure, record the commit as excluded with its reason and continue.
-- [ ] 3.4 Re-run failed tests at the same commit; mark flaky any test that then passes.
-- [ ] 3.5 Never write credentials to any artifact or log.
-- [ ] 3.6 Unit tests with injected fakes — no org required — covering: a clean commit, a
+- [x] 3.3 On deploy or run failure, record the commit as excluded with its reason and continue.
+- [x] 3.4 Re-run failed tests at the same commit; mark flaky any test that then passes.
+- [x] 3.5 Never write credentials to any artifact or log.
+- [x] 3.6 Unit tests with injected fakes — no org required — covering: a clean commit, a
       commit with failures, a deploy failure, a flaky test, and resume after interruption.
 
 ## 4. Wire to the scorer and report
