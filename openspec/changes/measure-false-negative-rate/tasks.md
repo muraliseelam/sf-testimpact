@@ -15,13 +15,13 @@ one that cannot proceed without them.
 
 ## 2. Observation store
 
-- [ ] 2.1 Add `src/bench/observationStore.ts` persisting per-commit, per-test outcomes to
+- [x] 2.1 Add `src/bench/observationStore.ts` persisting per-commit, per-test outcomes to
       newline-delimited JSON, appended after each commit.
-- [ ] 2.2 Record window identity (repo, base SHA, head SHA, commit count) in the store header.
-- [ ] 2.3 Refuse to run when the requested window does not match the stored one; report the
+- [x] 2.2 Record window identity (repo, base SHA, head SHA, commit count) in the store header.
+- [x] 2.3 Refuse to run when the requested window does not match the stored one; report the
       mismatch.
-- [ ] 2.4 Support resume: on startup, report which commits are already recorded.
-- [ ] 2.5 Unit tests: append, resume, window mismatch, and a truncated final line (interrupted
+- [x] 2.4 Support resume: on startup, report which commits are already recorded.
+- [x] 2.5 Unit tests: append, resume, window mismatch, and a truncated final line (interrupted
       mid-write) treated as absent rather than corrupting the store.
 
 ## 3. Org execution driver
