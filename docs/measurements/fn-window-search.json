@@ -1,0 +1,136 @@
+{
+  "queriedAt": "2026-09-09T04:50:03.300Z",
+  "runsPerRepo": 30,
+  "method": "gh api repos/<owner>/<repo>/actions/runs then .../jobs; job name matched /scratch|apex|test/i",
+  "caveat": "GitHub Actions retains run history for a limited window (90 days by default), so this observes only recent history. A job conclusion of \"failure\" is not by itself an Apex test failure: it can be a deploy error, an org-limit error or an infrastructure fault. Each failing run must be opened before it can be treated as a test failure.",
+  "results": [
+    {
+      "repo": "trailheadapps/apex-recipes",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexJobsPresent": 32,
+      "apexJobsExecuted": 16,
+      "apexJobsFailed": 3,
+      "failedRunIds": [
+        {
+          "runId": "33484245849",
+          "job": "format-lint-lwc-tests"
+        },
+        {
+          "runId": "32430358256",
+          "job": "format-lint-lwc-tests"
+        },
+        {
+          "runId": "32430358252",
+          "job": "format-lint-lwc-tests"
+        }
+      ]
+    },
+    {
+      "repo": "trailheadapps/dreamhouse-lwc",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexJobsPresent": 18,
+      "apexJobsExecuted": 9,
+      "apexJobsFailed": 0,
+      "failedRunIds": []
+    },
+    {
+      "repo": "trailheadapps/ebikes-lwc",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexJobsPresent": 22,
+      "apexJobsExecuted": 11,
+      "apexJobsFailed": 0,
+      "failedRunIds": []
+    },
+    {
+      "repo": "trailheadapps/lwc-recipes",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexJobsPresent": 18,
+      "apexJobsExecuted": 9,
+      "apexJobsFailed": 0,
+      "failedRunIds": []
+    },
+    {
+      "repo": "trailheadapps/coral-cloud",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexJobsPresent": 48,
+      "apexJobsExecuted": 36,
+      "apexJobsFailed": 6,
+      "failedRunIds": [
+        {
+          "runId": "28972701191",
+          "job": "scratch-org-test"
+        },
+        {
+          "runId": "28972033224",
+          "job": "scratch-org-test"
+        },
+        {
+          "runId": "28944423511",
+          "job": "scratch-org-test"
+        },
+        {
+          "runId": "28939942222",
+          "job": "format-lint-lwc-tests"
+        },
+        {
+          "runId": "28939896330",
+          "job": "format-lint-lwc-tests"
+        },
+        {
+          "runId": "28939823573",
+          "job": "scratch-org-test"
+        }
+      ]
+    },
+    {
+      "repo": "trailheadapps/automation-components",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexJobsPresent": 12,
+      "apexJobsExecuted": 8,
+      "apexJobsFailed": 1,
+      "failedRunIds": [
+        {
+          "runId": "30259483131",
+          "job": "format-lint-lwc-tests"
+        }
+      ]
+    },
+    {
+      "repo": "trailheadapps/easy-spaces-lwc",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexJobsPresent": 26,
+      "apexJobsExecuted": 13,
+      "apexJobsFailed": 3,
+      "failedRunIds": [
+        {
+          "runId": "18998455872",
+          "job": "format-lint-lwc-tests"
+        },
+        {
+          "runId": "18998451476",
+          "job": "format-lint-lwc-tests"
+        },
+        {
+          "runId": "18166464053",
+          "job": "format-lint-lwc-tests"
+        }
+      ]
+    },
+    {
+      "repo": "SalesforceFoundation/NPSP",
+      "reachable": true,
+      "runsInspected": 30,
+      "apexJobsPresent": 0,
+      "apexJobsExecuted": 0,
+      "apexJobsFailed": 0,
+      "failedRunIds": []
+    }
+  ]
+}

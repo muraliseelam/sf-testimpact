@@ -5,12 +5,12 @@ one that cannot proceed without them.
 
 ## 1. Select the measurement window
 
-- [ ] 1.1 Identify a public Salesforce repository whose git history contains **real Apex test
+- [x] 1.1 Identify a public Salesforce repository whose git history contains **real Apex test
       failures**. Verify the failures exist before selecting it; `apex-recipes` is measured at
       a 100% pass rate and cannot supply a numerator.
-- [ ] 1.2 Record the repository, base SHA, head SHA and commit count in
+- [x] 1.2 Record the repository, base SHA, head SHA and commit count in
       `docs/measurements/fn-window.json`.
-- [ ] 1.3 If no suitable public repository is found, record that finding and stop. Do not
+- [x] 1.3 If no suitable public repository is found, record that finding and stop. Do not
       substitute a synthetic window without labelling it as synthetic.
 
 ## 2. Observation store
