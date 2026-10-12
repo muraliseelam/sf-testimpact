@@ -5,17 +5,57 @@ to the default branch runs `.github/workflows/release.yml`, which lints, builds,
 then — only if all three pass — determines the next version from the commit messages,
 publishes to npm, tags the commit, and writes `CHANGELOG.md`.
 
-**Current state:** `v0.1.0` is published to npm and tagged on the commit it was built from.
-That first publish was done by hand; every release from here goes through the workflow.
+## Current state: the automated publish is broken until Trusted Publishing is switched on
 
-## One-time setup
+**What happened.** The release run for 1.2.0 on 2026-09-09
+([run 34411638267](https://github.com/muraliseelam/sf-testimpact/actions/runs/34411638267))
+built, tested and packed correctly, then failed at `npm publish`:
 
-1. **`NPM_TOKEN` repository secret.** Create an npm **automation** token (Access Tokens →
-   Generate New Token → Automation) on an account with publish rights to `sf-testimpact`, and
-   add it at Settings → Secrets and variables → Actions → New repository secret.
-   An automation token is required: a "publish" token with 2FA prompts cannot run unattended.
-2. **Nothing else.** `GITHUB_TOKEN` is provided by Actions automatically, and the workflow
-   requests the `contents: write` permission it needs to push the tag and changelog commit.
+```
+npm error code EOTP
+npm error This operation requires a one-time password.
+```
+
+npm now requires a one-time password for publishes made with the kind of token `NPM_TOKEN`
+holds (the same run printed npm's notice that *"tokens that bypass 2FA are being restricted
+for account changes and direct publishing"*). A token that needs a one-time password cannot
+publish from an unattended workflow, so **the `NPM_TOKEN` path can no longer release anything,
+and no new token of that kind can fix it.**
+
+1.2.0 was then published by hand from a workstation two minutes later, and the GitHub release
+and tag were created. The published tarball is the same version and file list as the one CI
+built, but it is a different build: its shasum differs from the one in the CI log and it
+carries no provenance attestation, because it was not published from the workflow.
+
+**What fixes it.** npm Trusted Publishing: GitHub mints a short-lived OIDC token for the
+workflow run, npm verifies it came from this repository and this workflow, and no long-lived
+secret is involved. The workflow side has been ready since before 1.2.0; the remaining step is
+one setting on npmjs.com that only the package owner can make:
+
+1. Open the `sf-testimpact` package on npmjs.com → **Settings** → **Trusted Publisher**.
+2. Choose **GitHub Actions** and enter:
+   - Organization or user: `muraliseelam`
+   - Repository: `sf-testimpact`
+   - Workflow filename: `release.yml`
+   - Environment: leave blank
+3. Save.
+
+The next push of a `feat:` or `fix:` commit to `main` then releases through OIDC. Until that
+setting exists, every such push produces a failed release run and an auto-filed issue
+labelled `semantic-release`, which is noise rather than damage: nothing is published and the
+next successful run releases everything accumulated since the last tag.
+
+**Why the workflow does not need to change for the cutover.** `@semantic-release/npm` tries
+OIDC first. Today it logs `OIDC token exchange with the npm registry failed: 404 - package not
+found` — npm's way of saying no trusted publisher is configured — and falls back to the token,
+which then fails on `EOTP`. Once the publisher is configured the exchange succeeds and the
+token is never consulted. The workflow's preflight step reports which path is live on every
+run, and warns rather than fails when the token is present but unusable, so a stale secret
+cannot block an OIDC release.
+
+**After the first OIDC release succeeds**, delete the `NPM_TOKEN` repository secret and remove
+the `NPM_TOKEN` lines from `release.yml`. Not before: the preflight output on that run is the
+evidence that OIDC worked.
 
 ## How the version is chosen
 
@@ -26,9 +66,9 @@ From the Conventional Commit prefixes since the last tag:
 | `fix:` | patch |
 | `feat:` | minor |
 | any commit with `!` or a `BREAKING CHANGE:` footer | major |
-| only `docs:`, `chore:`, `test:`, `refactor:` | **no release** |
+| only `docs:`, `chore:`, `ci:`, `test:`, `refactor:` | **no release** |
 
-`v0.1.0` is tagged, so each run releases only the commits since that tag.
+`v1.2.0` is the current tag, so the next run releases only the commits since it.
 
 ## Release branch
 
@@ -57,42 +97,23 @@ this instead of its true cause:
 gh label create semantic-release --color d4c5f9 --description "Automated release failure reports"
 ```
 
-## Trusted Publishing (OIDC) — prepared, not yet switched on
+## What the workflow does about npm authentication
 
-The workflow is ready for npm Trusted Publishing. Nothing needs to change in this repository
-to enable it; the remaining step is on npmjs.com, and it is one setting.
-
-**Why bother.** Releases have failed on token problems more than once — a granular token that
-`npm whoami` rejects, and a token that could not bypass 2FA (`EOTP`). Trusted Publishing
-removes the credential entirely: GitHub mints a short-lived OIDC token for the workflow run,
-npm verifies it came from this repository and this workflow, and no long-lived secret exists
-to expire, leak or be scoped wrongly.
-
-**What is already in place**
-
-- `permissions: id-token: write` on the release job.
-- npm is raised to `^11` before `npm ci`; the OIDC exchange needs npm >= 11.5.1, and an old
-  npm fails it in a way that looks like a bad token.
-- `@semantic-release/npm` already attempts OIDC first. Today it reports
-  `OIDC token exchange with the npm registry failed: 404 - package not found` and falls back
-  to `NPM_TOKEN`, which is why releases still work.
-
-**The remaining step, on npmjs.com**
-
-1. Open the `sf-testimpact` package → **Settings** → **Trusted Publisher**.
-2. Choose **GitHub Actions**, and enter:
-   - Organization or user: `muraliseelam`
-   - Repository: `sf-testimpact`
-   - Workflow filename: `release.yml`
-3. Save.
-
-The next release run will then exchange the OIDC token successfully and publish without the
-secret.
-
-**Do not delete `NPM_TOKEN` before that run succeeds.** Both paths are deliberately live: the
-token keeps releases working until OIDC takes over, and OIDC is attempted first, so switching
-on the npm setting is sufficient to cut over. Once a release has published via OIDC, the
-secret can be deleted and the `NPM_TOKEN` lines removed from the workflow.
+- `permissions: id-token: write` on the release job, so `@semantic-release/npm` can request
+  the GitHub OIDC token.
+- npm is raised to `^11` before `npm ci`. The OIDC exchange needs npm >= 11.5.1, and an older
+  npm fails it in a way that looks like a bad token. Given this project has already lost
+  release runs to misdiagnosed token errors, that trap is removed explicitly.
+- `actions/setup-node` is used **without `registry-url`**. With it, setup-node writes an
+  `.npmrc` whose auth line reads `_authToken=${NODE_AUTH_TOKEN}`, and npm 11 substitutes an
+  *unset* variable with the literal text `${NODE_AUTH_TOKEN}`, which it would then send to the
+  registry as a bearer token on every request — including `npm ci`. setup-node v4 masked this
+  by exporting a dummy value; v7 stopped doing so. `@semantic-release/npm` never needed that
+  file: it writes its own `.npmrc` from `NPM_TOKEN` or the exchanged OIDC token and passes it
+  to every npm command it runs.
+- The preflight step distinguishes the cases before semantic-release starts: no token means
+  "relying on Trusted Publishing"; a token that `npm whoami` rejects is a warning, not a
+  failure, for the reason above.
 
 ## Verifying a release candidate locally
 
@@ -112,7 +133,8 @@ npx semantic-release --dry-run --no-ci
 
 ## Manual release (fallback)
 
-Only if the workflow is broken and a release cannot wait.
+Only if the workflow is broken and a release cannot wait. This is how 1.2.0 shipped; a
+manually published tarball has no provenance attestation, so it is a fallback, not a habit.
 
 1. `npm run check` — lint, build and the full test suite must pass.
 2. `npm pack --dry-run` — confirm the file list, as above.
@@ -126,9 +148,10 @@ is `vX.Y.Z` and is pushed.
 
 ## Release checklist
 
+- [ ] Trusted Publisher configured on npmjs.com for `muraliseelam/sf-testimpact`,
+      workflow `release.yml` (one-time; see the top of this file).
 - [ ] `npm run check` passes.
 - [ ] `npm pack --dry-run` shows `oclif.manifest.json` and no `lib/bench/`.
 - [ ] `README.md` benchmark figures still match `docs/measurements/`.
 - [ ] The limitations table reflects the code as shipped.
-- [ ] `NPM_TOKEN` is set (automated path only).
 - [ ] The `semantic-release` label exists (forks only — see above).

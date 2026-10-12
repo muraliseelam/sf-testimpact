@@ -23,31 +23,32 @@ jobs:
       contents: write # semantic-release commits the changelog and pushes the tag
       issues: write # release notes are posted to related issues
       pull-requests: write
-      id-token: write # npm provenance, and the OIDC token for Trusted Publishing
+      id-token: write # the OIDC token for npm Trusted Publishing, and npm provenance
     steps:
-      - uses: actions/checkout@v4
+      # v4 of both actions runs on Node 20, which GitHub has deprecated on its runners; v7
+      # targets Node 24 natively.
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # semantic-release reads the full tag history
           persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      # Deliberately NO `registry-url`. With it, setup-node writes an .npmrc whose auth line
+      # is `_authToken=${NODE_AUTH_TOKEN}`, and npm 11 substitutes an UNSET variable with the
+      # literal text `${NODE_AUTH_TOKEN}`, which it then sends to the registry as a bearer
+      # token on every request, `npm ci` included. setup-node v4 masked that by exporting a
+      # dummy value; v7 stopped. @semantic-release/npm never needed that file: it writes its
+      # own .npmrc from NPM_TOKEN or the exchanged OIDC token and passes it to every npm
+      # command it runs. See RELEASING.md.
+      - uses: actions/setup-node@v7
         with:
           # semantic-release 25 requires ^22.22.2 || >=24.15.
           node-version: '24'
           cache: npm
-          registry-url: https://registry.npmjs.org
 
       # npm Trusted Publishing (OIDC) needs npm >= 11.5.1. The runner's bundled npm tracks the
       # Node release and is not guaranteed to be new enough, so it is raised explicitly rather
       # than left to chance - an old npm makes the OIDC exchange fail in a way that looks like
       # a bad token.
-      #
-      # This is the workflow half of the cutover only. Until a trusted publisher is configured
-      # for the package on npmjs.com, @semantic-release/npm tries OIDC, gets
-      # "404 OIDC token exchange error - package not found", and falls back to NPM_TOKEN.
-      # Both paths are live on purpose: the token keeps releases working today, and the moment
-      # the npm-side setting is switched on, OIDC wins and the token becomes dead weight that
-      # can then be deleted. See RELEASING.md.
       - name: Ensure npm supports Trusted Publishing
         run: |
           npm install -g npm@^11
@@ -60,50 +61,56 @@ jobs:
       - run: npm run build
       - run: npm run test
 
-      # Preflight. @semantic-release/npm verifies auth by calling `npm whoami`, and when that
-      # 401s it reports only "EINVALIDNPMTOKEN Invalid npm token", which is true but names
-      # neither the cause nor the fix. The most common cause here is not a bad secret at all:
-      # npm GRANULAR access tokens are rejected by /-/whoami even when they can publish
-      # perfectly well. This step separates the cases before the release starts, and never
-      # echoes the token.
+      # Preflight: say which authentication path this run can use, BEFORE semantic-release
+      # starts, because its own error for a bad token ("EINVALIDNPMTOKEN Invalid npm token")
+      # names neither the cause nor the fix.
+      #
+      # Two paths exist and @semantic-release/npm tries them in this order:
+      #   1. Trusted Publishing (OIDC). Needs `id-token: write` above and a Trusted Publisher
+      #      configured for this package on npmjs.com (RELEASING.md has the three fields).
+      #      Nothing here can check the npm-side setting; semantic-release's log line
+      #      "OIDC token exchange with the npm registry failed: 404" is what it looks like
+      #      when it is missing.
+      #   2. NPM_TOKEN. Since the 1.2.0 run this fails at publish with EOTP: npm requires a
+      #      one-time password for this kind of token, which an unattended run cannot supply.
+      #      It is kept only until the first OIDC release has succeeded, then deleted.
+      #
+      # A token that `npm whoami` rejects is therefore a WARNING, not a failure: failing here
+      # would let a stale secret block a release that OIDC would have completed.
       - name: Preflight npm authentication
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo "::error::No OIDC token endpoint in this job. Is 'id-token: write' still set on the release job?"
+            exit 1
+          fi
+          echo "OIDC: token endpoint present; Trusted Publishing will be attempted first."
+
           if [ -z "${NPM_TOKEN}" ]; then
-            echo "::error::NPM_TOKEN secret is empty or unset."
-            exit 1
-          fi
-          trimmed="$(printf '%s' "${NPM_TOKEN}" | tr -d '[:space:]')"
-          if [ "${#trimmed}" -ne "${#NPM_TOKEN}" ]; then
-            echo "::error::NPM_TOKEN contains whitespace (probably a trailing newline from \`gh secret set\`). Re-set it with: printf '%s' \"\$TOKEN\" | gh secret set NPM_TOKEN"
-            exit 1
-          fi
-          echo "NPM_TOKEN present: ${#NPM_TOKEN} chars, prefix '$(printf '%s' "${NPM_TOKEN}" | cut -c1-4)'"
-          if npm whoami >/tmp/whoami 2>/tmp/whoami.err; then
-            echo "npm whoami: $(cat /tmp/whoami)"
-          else
-            echo "::error::npm whoami failed - semantic-release will abort with EINVALIDNPMTOKEN."
-            sed 's/^/  /' /tmp/whoami.err || true
-            echo "::error::Check in order: (1) does the semantic-release step below also set NODE_AUTH_TOKEN? setup-node's .npmrc interpolates that name, not NPM_TOKEN. (2) is the token revoked or expired? (3) npm Trusted Publishing removes the token entirely: on npmjs.com open the sf-testimpact package -> Settings -> Trusted Publisher -> GitHub Actions, repo muraliseelam/sf-testimpact, workflow release.yml."
-            exit 1
+            echo "NPM_TOKEN: not set. This run relies on Trusted Publishing alone."
+            exit 0
           fi
 
-      # NODE_AUTH_TOKEN is not redundant with NPM_TOKEN, and leaving it out is what broke
-      # every release run so far. actions/setup-node with `registry-url` writes an .npmrc at
-      # NPM_CONFIG_USERCONFIG containing, literally:
-      #     //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
-      # npm expands that variable at read time. semantic-release inherits that config, so
-      # without NODE_AUTH_TOKEN in *this* step the token expands to an empty string and
-      # `npm whoami` returns 401, which surfaces as the misleading "EINVALIDNPMTOKEN Invalid
-      # npm token" - misleading because the token is fine. The preflight step above proved
-      # it: the same `npm whoami`, four seconds earlier, succeeded there purely because that
-      # step sets NODE_AUTH_TOKEN.
+          trimmed="$(printf '%s' "${NPM_TOKEN}" | tr -d '[:space:]')"
+          if [ "${#trimmed}" -ne "${#NPM_TOKEN}" ]; then
+            echo "::warning::NPM_TOKEN contains whitespace (probably a trailing newline from \`gh secret set\`). It cannot work as a fallback. Re-set it with: printf '%s' \"\$TOKEN\" | gh secret set NPM_TOKEN"
+            exit 0
+          fi
+          echo "NPM_TOKEN: present, ${#NPM_TOKEN} chars, prefix '$(printf '%s' "${NPM_TOKEN}" | cut -c1-4)'."
+
+          npmrc="${RUNNER_TEMP}/preflight.npmrc"
+          printf '//registry.npmjs.org/:_authToken=${NPM_TOKEN}\n' > "${npmrc}"
+          if npm whoami --userconfig "${npmrc}" --registry https://registry.npmjs.org/ >/tmp/whoami 2>/tmp/whoami.err; then
+            echo "NPM_TOKEN: npm whoami says $(cat /tmp/whoami). Note that whoami succeeding does not mean publish will: since 1.2.0 this token type fails at publish with EOTP (one-time password required). Trusted Publishing is the path that works."
+          else
+            echo "::warning::NPM_TOKEN is present but 'npm whoami' rejects it, so the token fallback is dead. The release succeeds only if Trusted Publishing is configured on npmjs.com (package Settings -> Trusted Publisher -> GitHub Actions, repo muraliseelam/sf-testimpact, workflow release.yml)."
+            sed 's/^/  /' /tmp/whoami.err || true
+          fi
+
       - run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
           GIT_AUTHOR_NAME: Murali Seelam
