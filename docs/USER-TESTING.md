@@ -261,3 +261,206 @@ readable.
 
 Nothing in this session produced a false-negative measurement; no org was available and none
 was attempted.
+
+---
+
+# Live org (2026-10-12)
+
+The first time any org-touching path in this tool ran against a real org. Scratch org
+`fn-run-2`, created from apex-recipes' own `config/project-scratch-def.json` on an
+authenticated Dev Hub, holding the apex-recipes tree at `bea5690` after the false-negative
+harness finished its window there ([docs/CORRECTNESS-PLAN.md §8.5](CORRECTNESS-PLAN.md)).
+The plugin under test was the working tree, linked with `sf plugins link`, so each fix below
+was re-run against the org before it was called fixed. Output is pasted from the terminal;
+the linked-plugin warning lines and the deploy progress spinner are trimmed, nothing else is.
+
+A one-line change was committed to `ListSortingRecipes.cls`, a class no entry point reaches,
+on a branch off `bea5690`.
+
+## D0. `index`, `analyze` and `deploy --dry-run` behave as the README says
+
+```
+$ sf testimpact index
+Indexed 204 files: 204 parsed, 0 unchanged
+649 nodes, 1128 edges, 50 taints
+Wrote .sf-testimpact/graph.json
+
+$ sf testimpact analyze --base bea5690
+Changed files: 1  (bea5690...HEAD)
+
+FALLBACK  entry-point-policy-full: QueueableChainingRecipes is an entry point (queueable), so its callers may live outside this repository and the graph’s inbound edges to it are incomplete. 5 other impacted entry point(s): LDVRecipes, QueueableWithCalloutRecipes, AccountTrigger, CustomRestEndpointRecipes, InboundEmailHandlerRecipes.
+          hint: `entryPointPolicy: widen` selects only the tests that reach an entry point of the same kind. Faster, but it assumes no unindexed caller reaches these classes.
+WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because ListSortingRecipes is impacted. Classes with unresolvable references into that domain are selected too.
+
+Running the full suite (RunLocalTests). See the FALLBACK lines above.
+
+With `entryPointPolicy: widen` this change set would select 29 of 68 tests (57.35% skipped).
+  That assumes nothing outside this repository calls: QueueableChainingRecipes, LDVRecipes, QueueableWithCalloutRecipes, AccountTrigger, CustomRestEndpointRecipes, InboundEmailHandlerRecipes
+exit=0
+
+$ sf testimpact deploy --base bea5690 --dry-run
+Running RunLocalTests: entry-point-policy-full (QueueableChainingRecipes).
+sf project deploy start --test-level RunLocalTests
+exit=0
+```
+
+One cosmetic thing: when stdout is not a terminal, `index` prints every spinner frame
+(`Indexing... 1/204 files`, `2/204`, and so on) on one line. Not fixed; it is the CLI's
+spinner, and `--json` output is unaffected.
+
+## D1. `--verify-coverage` had never worked: the Tooling API refuses the query
+
+```
+$ sf testimpact deploy --base bea5690 --verify-coverage --target-org fn-run-2 --dry-run
+Running RunLocalTests: entry-point-policy-full (QueueableChainingRecipes).
+Error (1):
+SELECT Name FROM ApexClass WHERE Body LIKE '%@isTest%' OR Body LIKE
+                                 ^
+ERROR at Row:1:Column:34
+field 'Body' can not be filtered in a query call
+exit=1
+```
+
+The org-only-test check selected `ApexClass` filtered on `Body`. The Tooling API returns
+`Body` but will not filter on it, so every `--verify-coverage` since 0.1.0 failed here. The
+earlier user testing could not have found it: it needed an org. **Fixed:** bodies are
+fetched and the marker applied client-side, managed classes are left out (`RunLocalTests`
+does not run them), and the result is paged with `queryMore`, refusing to return a
+truncated list rather than under-reporting drift.
+
+## D2. The test-class marker matched a comment
+
+With D1 fixed:
+
+```
+$ sf testimpact deploy --base bea5690 --verify-coverage --target-org fn-run-2 --dry-run
+Running RunLocalTests: entry-point-policy-full (QueueableChainingRecipes).
+Checked coverage for 1 class(es) against the org.
+Note: this is the org's coverage from its LAST test run, not a prediction of the run about to happen.
+Warning: The org has 1 test class(es) that this repository does not, so they contribute coverage under RunLocalTests but not under RunSpecifiedTests: ConnectApiWrapper
+sf project deploy start --test-level RunLocalTests --target-org fn-run-2
+exit=0
+```
+
+The org and the repository are identical, so there is no org-only test. `ConnectApiWrapper`
+is not a test; its doc comment says *"unless used in test methods marked
+`@isTest(SeeAllData=true)`"*, and the unanchored marker matched it. **Fixed:** the marker is
+anchored to the start of a line, and on apex-recipes it then finds exactly the 68 classes
+the graph considers tests. After the fix, under `entryPointPolicy: widen`:
+
+```
+$ sf testimpact deploy --base bea5690 --verify-coverage --target-org fn-run-2 --dry-run
+Running 29 of 68 tests (RunSpecifiedTests).
+Checked coverage for 1 class(es) against the org.
+Note: this is the org's coverage from its LAST test run, not a prediction of the run about to happen.
+sf project deploy start --test-level RunSpecifiedTests --tests ... (29 tests) --target-org fn-run-2
+exit=0
+```
+
+Worth knowing: the harness had run the suite without `--code-coverage`, so the org held no
+aggregate coverage at first; one `sf apex run test --code-coverage` run populated it.
+
+## D3. The documented flag passthrough did not work, twice over
+
+The README said unrecognised flags pass through to `sf project deploy start`.
+
+```
+$ sf testimpact deploy --base bea5690 --target-org fn-run-2 --source-dir force-app
+Error (2): Nonexistent flag: --source-dir
+See more help with --help
+exit=2
+```
+
+oclif rejects an undeclared flag whatever `strict` says; `strict = false` only admits extra
+*arguments*. The `--` separator does reach the command, but the passthrough then kept only
+tokens starting with `-`, dropping every flag value:
+
+```
+$ sf testimpact deploy --base bea5690 --target-org fn-run-2 --dry-run -- --source-dir force-app
+Running 29 of 68 tests (RunSpecifiedTests).
+sf project deploy start --test-level RunSpecifiedTests --tests AccountServiceLayer_Tests [... 27 more ...] --tests TestFactory --target-org fn-run-2 --source-dir
+exit=0
+```
+
+**Fixed:** everything after `--` is passed through unchanged, in order, and the command's
+help and the README now say so.
+
+## D4. On Windows, a path with a space was split in two
+
+```
+$ sf testimpact deploy --base bea5690 --target-org fn-run-2 -- --source-dir "force-app/main/default/classes/Collection Recipes/ListSortingRecipes.cls"
+Running 29 of 68 tests (RunSpecifiedTests).
+Error (SfError): force-app/main/default/classes/Collection: File or folder not found
+exit=1
+```
+
+`sf` is `sf.cmd` on Windows, which Node starts through a shell, and a shell joins the
+arguments with spaces. apex-recipes keeps its classes in directories with spaces in their
+names. **Fixed:** arguments are quoted for `cmd.exe` when the spawn goes through it.
+
+## D5. Deploy the delta, not the directory: the platform enforces this, not the tool
+
+With `-- --source-dir force-app` the payload was every class in the project, and
+`RunSpecifiedTests` requires each class *in the payload* at 75% from the tests that ran:
+
+```
+ »   Warning: FormattedRecipeDisplayController - Test coverage of selected Apex Class is 0%, at least 75% test coverage is required
+ »   Warning: ApiServiceRecipes - Test coverage of selected Apex Class is 0%, at least 75% test coverage is required
+ [... 20 more ...]
+ Status: Failed
+exit=1
+```
+
+Not a defect. The coverage argument in the README is about the *changed* classes, and the
+closure selects every test that reaches them; it never claimed anything about unchanged
+classes that happen to be in the payload. A tracked deploy or a delta `--source-dir` keeps
+the payload to the change set. Recorded because it is the mistake a first user would make.
+
+A plain tracked deploy from this particular worktree failed for an unrelated reason: it
+carried the pending deletions of a case-only field rename that the harness run had left in
+source tracking (§8.3 of the correctness plan), and failed on those before any test ran.
+
+## D6. The end-to-end deploy: selected tests ran, a real failure blocked it
+
+The one changed class as the payload, 29 selected test classes, 162 methods:
+
+```
+$ sf testimpact deploy --base bea5690 --target-org fn-run-2 -- --source-dir "force-app/main/default/classes/Collection Recipes/ListSortingRecipes.cls"
+Running 29 of 68 tests (RunSpecifiedTests).
+ ─────────────── Deploying Metadata ───────────────
+ ✔ Deploying Metadata
+   ▸ Components: 1/1 (100%)
+ ✘ Running Tests 1m 35.24s
+   ▸ Successful: 161/162 (99%)
+ Status: Failed
+Test Failures [1]
+• CustomMetadataRecipes_Tests.testBucketingContactAttendancePositive
+  message: System.AssertException: Assertion Failed: Expected to find one matching bucketed picklist field for contact: Expected: 1, Actual: 0
+  stacktrace:
+    Class.CustomMetadataRecipes_Tests.testBucketingContactAttendancePositive: line 36, column 1
+Test Results Summary
+Passing: 161
+Failing: 1
+Total: 162
+Time: 95146
+exit=1
+```
+
+This is the contract working: the wrapper handed the platform the selected tests, the
+platform ran them, one failed, the deploy was rejected, and the exit code says so. The
+failing test is the same one that failed at all 30 commits of the harness window; it needs
+org data a fresh scratch org does not have, and it is selected here because the change
+activated the `apexType` taint domain. A user with that test passing in their org would have
+seen a green deploy with 29 of 68 test classes.
+
+## Findings
+
+| # | Finding | Severity | Fixed |
+| --- | --- | --- | --- |
+| D1 | `--verify-coverage` always failed: `Body` cannot be filtered in a Tooling query | **High**: the only org path never worked | **Fixed**, with paging |
+| D2 | Org-only-test marker matched a doc comment and reported a non-test | Medium: spurious drift warning | **Fixed**: line-anchored |
+| D3 | Flag passthrough rejected by oclif; after `--`, values dropped | Medium: documented feature did not work | **Fixed**: `--` form, values kept |
+| D4 | Windows: a path with a space split into two arguments | Medium: any space-containing path | **Fixed**: quoted for `cmd.exe` |
+| D5 | Whole-directory payload fails per-class coverage | Guidance: deploy the delta | Documented |
+| D0 | `index` spinner frames repeat when stdout is not a TTY | Low: cosmetic | Not fixed; the CLI's spinner |
+| D6 | End-to-end deploy with selected tests | | Works; blocked by a genuine test failure |

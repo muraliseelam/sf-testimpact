@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-12T15:37:16.754Z",
+  "toolVersion": "1.2.0",
+  "store": "docs/measurements/fn-observations.ndjson",
+  "method": {
+    "execution": "bench/execute.js: full RunLocalTests suite at every first-parent commit of the window, base executed as baseline",
+    "selection": "bench/fn-report.js: index at each commit from git blobs, diff against first parent, analyze under each policy",
+    "scoring": "src/bench/falseNegatives.ts via src/bench/fnReport.ts; rate withheld below minDenominator"
+  },
+  "recorded": 31,
+  "scorable": 30,
+  "report": {
+    "window": {
+      "repo": "https://github.com/trailheadapps/apex-recipes",
+      "baseSha": "9802930d61dac5eb384aa0d3ea15c2cb7b40255b",
+      "headSha": "87c1c9b674de15870e546b862fa93fbd04a4e130",
+      "commitCount": 31
+    },
+    "minDenominator": 30,
+    "measurable": false,
+    "perPolicy": [
+      {
+        "policy": "full",
+        "rateReportable": false,
+        "falseNegativeRatePercent": null,
+        "newlyFailing": 2,
+        "falseNegatives": 0,
+        "falseNegativeDetail": [],
+        "fallbacks": 25,
+        "fallbackRatePercent": 83.33333333333334,
+        "reductionPercent": 16.8141592920354,
+        "totalSelected": 1598,
+        "totalAvailable": 1921,
+        "flakyExcluded": 0,
+        "commitsScored": 30,
+        "note": "not measurable from this data: 2 newly-failing (test, commit) pair(s), below the 30 needed to quote a rate. The counts above are still the observed counts."
+      },
+      {
+        "policy": "widen",
+        "rateReportable": false,
+        "falseNegativeRatePercent": null,
+        "newlyFailing": 2,
+        "falseNegatives": 0,
+        "falseNegativeDetail": [],
+        "fallbacks": 11,
+        "fallbackRatePercent": 36.666666666666664,
+        "reductionPercent": 39.406559083810514,
+        "totalSelected": 1164,
+        "totalAvailable": 1921,
+        "flakyExcluded": 0,
+        "commitsScored": 30,
+        "note": "not measurable from this data: 2 newly-failing (test, commit) pair(s), below the 30 needed to quote a rate. The counts above are still the observed counts."
+      },
+      {
+        "policy": "strict",
+        "rateReportable": false,
+        "falseNegativeRatePercent": null,
+        "newlyFailing": 2,
+        "falseNegatives": 0,
+        "falseNegativeDetail": [],
+        "fallbacks": 11,
+        "fallbackRatePercent": 36.666666666666664,
+        "reductionPercent": 39.51067152524727,
+        "totalSelected": 1162,
+        "totalAvailable": 1921,
+        "flakyExcluded": 0,
+        "commitsScored": 30,
+        "note": "not measurable from this data: 2 newly-failing (test, commit) pair(s), below the 30 needed to quote a rate. The counts above are still the observed counts."
+      }
+    ],
+    "excludedCommits": [
+      {
+        "commit": "9802930d61dac5eb384aa0d3ea15c2cb7b40255b",
+        "reason": "deploy failed: 1 component failure(s): Prompt ApexRecipesIntroWalkthrough: Error parsing file: Element customApplication is duplicated at this location in type PromptVersion"
+      }
+    ],
+    "flakyObserved": [],
+    "summary": "not measurable from this data. The window produced 2 newly-failing (test, commit) pair(s), below the 30 this project requires before quoting a false-negative rate. Raw counts are reported; no percentage is. 1 commit(s) were excluded and are listed."
+  }
+}

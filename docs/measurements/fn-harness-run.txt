@@ -1,0 +1,146 @@
+# Transcript of the first live run of the false-negative harness, 2026-10-12.
+# Repository: https://github.com/trailheadapps/apex-recipes, cloned to C:\t\fn\apex-recipes; window
+# 9802930d..87c1c9b6, --only-source-changes (30 commits + the base as baseline).
+# Three invocations appended to one log, in this order. Instance URLs are redacted.
+#
+# 1. 08:40 CDT, scratch org fn-run (created from config/project-scratch-def.json on the partner-pbo Dev Hub):
+#    node bench/execute.js --only-source-changes --repo apex-recipes --worktree apex-recipes-fn-worktree
+#      --target-org fn-run --base 9802930d61dac5eb384aa0d3ea15c2cb7b40255b --head 87c1c9b674de15870e546b862fa93fbd04a4e130
+#      --store docs/measurements/fn-observations.ndjson --test-wait 60 --deploy-wait 30
+#    Stopped by hand after the 23rd commit when every DataWeave-era deploy failed (section 8.3 of
+#    docs/CORRECTNESS-PLAN.md explains); the next invocation retried those commits.
+# 2. 09:39 CDT, same org, with --retry-excluded --pre-deploy-dir force-app/main/default/dw.
+#    From the Summer '24 release on, tracked deploys failed on a case-only field rename, and from the
+#    22nd full suite the org's DailyAsyncApexTests limit (1,360) was exhausted, so the test runs that
+#    did reach the org failed to enqueue ("An unknown exception occurred").
+# 3. 09:54 CDT, fresh scratch org fn-run-2, with --retry-excluded --deploy-mode source-dir
+#    --pre-deploy-dir force-app/main/default/dw. Completed the window.
+#
+# Every exclusion below that was later retried has its final outcome in the store; the only
+# exclusion that stands is the base commit, whose Prompt metadata predates a format the current API
+# accepts (the next commit in the window is upstream's fix for it).
+window: https://github.com/trailheadapps/apex-recipes
+  9802930d61..87c1c9b674: 204 commit(s), plus the base as baseline
+  --only-source-changes: 30 of 204 change something under the source paths; the rest deploy nothing and are skipped
+creating worktree C:\t\fn\apex-recipes-fn-worktree at 9802930d61
+Preparing worktree (detached HEAD 9802930)
+target org: fn-run; deploy mode: tracking; test wait: 60 min
+
+[1/31] 9802930d61dac5eb384aa0d3ea15c2cb7b40255b
+  excluded: deploy failed: 1 component failure(s): Prompt ApexRecipesIntroWalkthrough: Error parsing file: Element customApplication is duplicated at this location in type PromptVersion
+[2/31] 00f539e8c6374df78190c9dbd49835c3eaf6fc95
+[3/31] 7d65ac496f72dc67bf75fa8b064c9812cd79fc4e
+[4/31] 445febd98c85a88c686eb56ff3faf15df9698b4d
+[5/31] 844001571469da19cb34375df5e9d3f803363f7e
+[6/31] 1cb266d70d1c68f16d3bdb974076994350ee6702
+[7/31] c2369651d94a951e3e6e5f64eb14bff54618113f
+[8/31] 457010370bd3821d80a9abf4ef01949ec430753c
+[9/31] e1663c4efe02834967eb1086c632ee8fd9aa34d2
+[10/31] 0d3747b7a26eb83713bd7c6f206be8f25d96a422
+[11/31] b61e68e57424acee678b1b19eec44a76e94b9332
+[12/31] 2973fffd4f14890eaa22fb87bfacd5e8937cbf0d
+[13/31] 3b68dfc88ff45a6cfcb7fce3340aea2887908f5d
+[14/31] 5473116388237994e8e062df71ca80ae38f4b29d
+[15/31] 64cfd927d5defcaf70e2dcc3081901923c0012f1
+[16/31] f74e85bee7de8ac9e5d2ee46dd764c355081de1d
+[17/31] 46f7dc029a87c6798ecb9a9121f667ad91f81ff3
+[18/31] c3c573556cca6e71f78f308f9ce86b8973ba74cd
+[19/31] 04f2eb5a6e74c95ee389609a3801300da1652852
+[20/31] 254de9ccda1b70078a66bafa8b4b6849ec6aae32
+[21/31] 2132f1e542080360f9dd322bd709dd8d197433a9
+[22/31] feeab10534b8d5377457861b7105b159d26c86eb
+  excluded: deploy failed: 16 component failure(s): ApexClass CsvToJsonConversionRecipes: Invalid type: DataWeaveScriptResource.csvToJsonBasic; ApexClass CsvToJsonConversionRecipes: Invalid type: DataWeaveScriptResource.csvToJsonWithFieldRenaming; ApexClass CsvToJsonConversionRecipes: Invalid type: DataWeaveScriptResource.csvSeparatorToJson; ApexClass CsvToJsonConversionRecipes_Tests: Dependent class is invalid and needs recompilation:
+ Class CsvToJsonConversionRecipes : Invalid type: DataWeaveScriptResource.csvToJsonBasic; ApexClass DataWeaveErrorRecipes: Invalid type: DataWeaveScriptResource.excelOutputError (and 11 m…
+[23/31] 2d99a75e5011fad1a46bfc74cae1d116e3406201
+  excluded: deploy failed: 16 component failure(s): ApexClass CsvToJsonConversionRecipes: Invalid type: DataWeaveScriptResource.csvToJsonBasic; ApexClass CsvToJsonConversionRecipes: Invalid type: DataWeaveScriptResource.csvToJsonWithFieldRenaming; ApexClass CsvToJsonConversionRecipes: Invalid type: DataWeaveScriptResource.csvSeparatorToJson; ApexClass CsvToJsonConversionRecipes_Tests: Dependent class is invalid and needs recompilation:
+ Class CsvToJsonConversionRecipes : Invalid type: DataWeaveScriptResource.csvToJsonBasic; ApexClass DataWeaveErrorRecipes: Invalid type: DataWeaveScriptResource.excelOutputError (and 11 m…
+[24/31] a9b2d5a97f4d726098814369d5591ba242c07036
+window: https://github.com/trailheadapps/apex-recipes
+  9802930d61..87c1c9b674: 204 commit(s), plus the base as baseline
+  --only-source-changes: 30 of 204 change something under the source paths; the rest deploy nothing and are skipped
+--retry-excluded: removed 3 exclusion record(s) so those commits run again (9802930d61, feeab10534, 2d99a75e50); the store as it was is at bench\results\fn-observations.ndjson.before-retry-2026-10-12T14-39-49-788Z
+store: ..\..\Users\mural\Documents\gitclone\sf-testimpact\docs\measurements\fn-observations.ndjson already holds 20 commit(s); resuming
+target org: fn-run; deploy mode: tracking; test wait: 60 min
+
+[1/31] 9802930d61dac5eb384aa0d3ea15c2cb7b40255b
+  excluded: deploy failed: 1 component failure(s): Prompt ApexRecipesIntroWalkthrough: Error parsing file: Element customApplication is duplicated at this location in type PromptVersion
+[22/31] feeab10534b8d5377457861b7105b159d26c86eb
+[23/31] 2d99a75e5011fad1a46bfc74cae1d116e3406201
+  excluded: test run failed: sf apex run test exited with status 1:  »   Warning: sf-testimpact is a linked ESM module and cannot be 
+ »   auto-transpiled. Existing compiled source will be used instead.
+Error (UNKNOWN_EXCEPTION): An unknown exception occurred.
+[24/31] a9b2d5a97f4d726098814369d5591ba242c07036
+  excluded: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventPublishCallback.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere i…
+[25/31] 2e2c1c3a8b197de06d6b709b877d1147c79fe26c
+  excluded: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventPublishCallback.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere i…
+[26/31] ee106ee22bce97b49f415b6d357c42a33c71c3b9
+  excluded: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+[27/31] cee745493111b93f8af42c0c7fa55e5f8b52f8b0
+  excluded: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+[28/31] d5cb54c06e26ed97e95e3ffebfdaebe231f48fe4
+  excluded: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+[29/31] ee3a342be372d3478835171a39433cb53d825e59
+  excluded: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+[30/31] 8cc7406eaeaf2a7e25fb47a88e9a6339cca92b59
+  excluded: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+[31/31] bea56904fd55a0e27ad784adac1b854506b7a2d9
+  excluded: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+
+attempted 31, recorded 1, already recorded 20
+excluded 10, flaky observed 0
+  excluded 9802930d61: deploy failed: 1 component failure(s): Prompt ApexRecipesIntroWalkthrough: Error parsing file: Element customApplication is duplicated at this location in type PromptVersion
+  excluded 2d99a75e50: test run failed: sf apex run test exited with status 1:  »   Warning: sf-testimpact is a linked ESM module and cannot be 
+ »   auto-transpiled. Existing compiled source will be used instead.
+Error (UNKNOWN_EXCEPTION): An unknown exception occurred.
+  excluded a9b2d5a97f: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventPublishCallback.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere i…
+  excluded 2e2c1c3a8b: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventPublishCallback.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere i…
+  excluded ee106ee22b: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+  excluded cee7454931: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+  excluded d5cb54c06e: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+  excluded ee3a342be3: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+  excluded 8cc7406eae: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+  excluded bea56904fd: deploy failed: 3 component failure(s): CustomField Event_Recipes_Demo__e.accountId__c: This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipesTriggerHandler_Tests. This custom field is referenced elsewhere in salesforce.com. : Apex Class - PlatformEventRecipes_Tests.; CustomField Event_Recipes_Demo__e.title__c: This custom field is referenced elsewhere in salesf…
+window complete. Score it with: node bench/fn-report.js --repo apex-recipes --store ..\..\Users\mural\Documents\gitclone\sf-testimpact\docs\measurements\fn-observations.ndjson
+(node:3720) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+window: https://github.com/trailheadapps/apex-recipes
+  9802930d61..87c1c9b674: 204 commit(s), plus the base as baseline
+  --only-source-changes: 30 of 204 change something under the source paths; the rest deploy nothing and are skipped
+--retry-excluded: removed 10 exclusion record(s) so those commits run again (9802930d61, 2d99a75e50, a9b2d5a97f, 2e2c1c3a8b, ee106ee22b, cee7454931, d5cb54c06e, ee3a342be3, 8cc7406eae, bea56904fd); the store as it was is at bench\results\fn-observations.ndjson.before-retry-2026-10-12T14-49-40-084Z
+store: ..\..\Users\mural\Documents\gitclone\sf-testimpact\docs\measurements\fn-observations.ndjson already holds 21 commit(s); resuming
+target org: fn-run; deploy mode: source-dir; test wait: 60 min
+
+[1/31] 9802930d61dac5eb384aa0d3ea15c2cb7b40255b
+  excluded: deploy failed: 1 component failure(s): Prompt ApexRecipesIntroWalkthrough: Error parsing file: Element customApplication is duplicated at this location in type PromptVersion
+[23/31] 2d99a75e5011fad1a46bfc74cae1d116e3406201
+  test run attempt 1 failed (sf apex run test exited with status 1: Error (UNKNOWN_EXCEPTION): An unknown exception occurred.); retrying
+  excluded: test run failed: sf apex run test exited with status 1: Error (UNKNOWN_EXCEPTION): An unknown exception occurred.
+[24/31] a9b2d5a97f4d726098814369d5591ba242c07036
+  test run attempt 1 failed (sf apex run test exited with status 1: Error (UNKNOWN_EXCEPTION): An unknown exception occurred.); retrying
+  excluded: test run failed: sf apex run test exited with status 1: Error (UNKNOWN_EXCEPTION): An unknown exception occurred.
+[25/31] 2e2c1c3a8b197de06d6b709b877d1147c79fe26c
+window: https://github.com/trailheadapps/apex-recipes
+  9802930d61..87c1c9b674: 204 commit(s), plus the base as baseline
+  --only-source-changes: 30 of 204 change something under the source paths; the rest deploy nothing and are skipped
+--retry-excluded: removed 3 exclusion record(s) so those commits run again (9802930d61, 2d99a75e50, a9b2d5a97f); the store as it was is at bench\results\fn-observations.ndjson.before-retry-2026-10-12T14-55-57-387Z
+store: ..\..\Users\mural\Documents\gitclone\sf-testimpact\docs\measurements\fn-observations.ndjson already holds 21 commit(s); resuming
+target org: fn-run-2; deploy mode: source-dir; test wait: 60 min
+
+[1/31] 9802930d61dac5eb384aa0d3ea15c2cb7b40255b
+  excluded: deploy failed: 1 component failure(s): Prompt ApexRecipesIntroWalkthrough: Error parsing file: Element customApplication is duplicated at this location in type PromptVersion
+[23/31] 2d99a75e5011fad1a46bfc74cae1d116e3406201
+[24/31] a9b2d5a97f4d726098814369d5591ba242c07036
+[25/31] 2e2c1c3a8b197de06d6b709b877d1147c79fe26c
+[26/31] ee106ee22bce97b49f415b6d357c42a33c71c3b9
+[27/31] cee745493111b93f8af42c0c7fa55e5f8b52f8b0
+[28/31] d5cb54c06e26ed97e95e3ffebfdaebe231f48fe4
+[29/31] ee3a342be372d3478835171a39433cb53d825e59
+[30/31] 8cc7406eaeaf2a7e25fb47a88e9a6339cca92b59
+[31/31] bea56904fd55a0e27ad784adac1b854506b7a2d9
+
+attempted 31, recorded 9, already recorded 21
+excluded 1, flaky observed 0
+  excluded 9802930d61: deploy failed: 1 component failure(s): Prompt ApexRecipesIntroWalkthrough: Error parsing file: Element customApplication is duplicated at this location in type PromptVersion
+window complete. Score it with: node bench/fn-report.js --repo apex-recipes --store ..\..\Users\mural\Documents\gitclone\sf-testimpact\docs\measurements\fn-observations.ndjson
+(node:8024) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)

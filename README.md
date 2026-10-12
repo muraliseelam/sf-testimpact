@@ -28,12 +28,16 @@ with the rule that fired.
 
 Published on npm as `sf-testimpact` 1.x. It has been installed and driven end to end by its
 maintainer ([docs/USER-TESTING.md](docs/USER-TESTING.md)); it has **no known production
-deployments**. It has never been run against a live Salesforce org: `index` and `analyze`
-are entirely offline, `deploy` and `deploy --verify-coverage` have been exercised only
-against mocks, and the harness that would measure the false-negative rate has been exercised
-only offline. The false-negative rate — the headline correctness metric this tool is
-designed around — **has never been measured**; see
-[Correctness: still unmeasured](#correctness-still-unmeasured).
+deployments**. `index` and `analyze` are entirely offline. On 2026-10-12 the org-touching
+parts ran against a live Salesforce org for the first time: the false-negative harness
+executed 30 commits of apex-recipes in scratch orgs, and `deploy` and
+`deploy --verify-coverage` ran against the same org — which found **four defects that had
+shipped in the only code path that contacts an org**, all fixed in this release and listed
+in [the live-org findings](docs/USER-TESTING.md#live-org-2026-10-12). The false-negative
+rate — the headline correctness metric this tool is designed around — has now been measured
+once, and that data **does not support quoting a rate**: 2 newly-failing pairs against the
+30 this project requires, with 0 false negatives under every policy. See
+[Correctness: measured once, not yet measurable](#correctness-measured-once-not-yet-measurable).
 
 **At shipped defaults, measured over 30 real commits, this tool selects nothing and runs
 your whole suite.** That is a deliberate safety default, not a bug, but it means the tool
@@ -412,47 +416,63 @@ Remaining blockers at 12/30 commits, by occurrences across the window: `.js-meta
 `.js` (10), `.json` (7), `.html` (7), `.css` (3). The first three of those are the LWC files
 discussed above.
 
-### Correctness: still unmeasured
+### Correctness: measured once, not yet measurable
 
 The headline metric — does selection ever miss a test that would have caught a regression —
-**remains unmeasured**.
+has been **measured once**, on 2026-10-12, against a real org. The data does not support a
+rate, and this section says what it does support.
 
-Computing it requires per-commit historical Apex test results — the suite passing at `c^` and
-failing at `c`. Neither repository benchmarked here publishes those, and no public Salesforce
-repository was found that does. Generating them means running the full suite at every commit
-against a real org, which this project has never done.
+Computing the metric requires per-commit Apex test results — the suite passing at `c^` and
+failing at `c`. No public Salesforce repository publishes those, so the harness in this
+repository generates them: `bench/execute.js` deploys each commit of a window to a scratch
+org, runs the **full** suite, and appends per-test outcomes to a resumable store;
+`bench/fn-report.js` scores the store under every `entryPointPolicy` and withholds the rate
+below a 30-pair denominator. It ran on 30 apex-recipes commits — every first-parent commit
+between `9802930d` and `87c1c9b6` that changes something under `force-app` — across two
+scratch orgs, because the first exhausted its daily test limit after 21 full suites.
 
-**The harness that would generate them is now built and is not the blocker.**
-`bench/execute.js` deploys each commit of a window to a scratch org, runs the full suite,
-and appends per-test outcomes to a resumable store; `bench/fn-report.js` scores the store
-under every `entryPointPolicy` and withholds the rate below a 30-pair denominator. The logic
-is unit-tested with fakes and recorded CLI output, and the offline half was exercised with
-`--dry-run` against apex-recipes
-([artifact](docs/measurements/fn-harness-dry-run.txt)). It has never been pointed at an
-org. Two things stand between it and a number, and neither is code:
+Artifacts: [the store](docs/measurements/fn-observations.ndjson) (every outcome of every
+run), [the scored report](docs/measurements/false-negative-rate.json), and
+[the transcript](docs/measurements/fn-harness-run.txt). Method and findings:
+[docs/CORRECTNESS-PLAN.md §8](docs/CORRECTNESS-PLAN.md).
 
-- **An org.** A Dev Hub with scratch-org allocation, authenticated to the `sf` CLI on the
-  machine running it. None is.
-- **A window with a numerator.** A survey of eight public Salesforce repositories' CI history
-  found **zero** runs containing a failing Apex *test*
-  ([artifact](docs/measurements/fn-window.json)). Running the harness on apex-recipes would
-  produce a real, recorded null result — "not measurable from this data" — and would be this
-  project's first live-org run of anything, but it cannot produce a rate. A rate needs a
-  history with real regressions in it, which in practice means a private repository.
+| | `full` (default) | `widen` | `strict` |
+| --- | --- | --- | --- |
+| Commits scored | 30 | 30 | 30 |
+| Newly-failing (test, commit) pairs | 2 | 2 | 2 |
+| False negatives | **0** | **0** | **0** |
+| False-negative rate | not measurable | not measurable | not measurable |
+| Fallback rate | 83.3% | 36.7% | 36.7% |
+| Reduction | 16.8% | 39.4% | 39.5% |
+| Commits excluded | 1 — the base commit's Prompt metadata predates a format the current API accepts | | |
+
+**Two pairs is not a denominator**, so the rate is withheld rather than quoted as 0%. Both
+pairs are at one commit, upstream's "doc: improved doc generation": two tests passed at the
+previous commit, failed there, and passed again at the next commit, which is upstream's
+"fix: related classes parsing". That is a real regression in a real history, and the harness
+caught it. It says nothing about the graph: that commit also touched LWC files, which force
+a full run under every policy, so every policy "selected" those tests by running everything.
+
+**What the run does show.** Fallback and reduction on real outcomes rather than on a
+replayed selection; zero flaky tests across 30 full suites of about 320 methods; one test
+(`CustomMetadataRecipes_Tests.testBucketingContactAttendancePositive`) that fails at every
+commit in a fresh scratch org and therefore counts nowhere; and that the measurement
+machinery holds up against an org, after four environment problems the first run surfaced
+and the plan now documents.
+
+**What still stands between this and a rate** is a window with regressions in commits that
+do not also trip a fallback. A survey of eight public Salesforce repositories' CI history
+found **zero** runs containing a failing Apex *test* ([artifact](docs/measurements/fn-window.json)),
+and the one regression in this window came with an LWC change. In practice that means a
+private repository's history, run with the commands in the plan.
 
 A search for an existing public benchmark for Salesforce change-impact test selection turned
 up nothing usable as a substitute. Building one, with generator-recorded ground truth, is
 open work that this project has not done.
 
-How it would be measured, what data that needs, how to run the harness, and which pieces
-exist are specified in [docs/CORRECTNESS-PLAN.md](docs/CORRECTNESS-PLAN.md). Two findings
-from writing it are worth stating here: public CI for apex-recipes does run Apex tests, but
-the job was **skipped on 25 of the 25 most recent PR runs** (it needs org credentials), and
-the one retained run that did execute reports a **100% pass rate** — a metric whose
-numerator is failures cannot be built from repositories selected for not having any.
-
-Until that measurement lands, **treat every reduction figure above as a claim about speed only.
-Nothing here is evidence about safety.**
+Until a window with enough regressions is measured, **treat every reduction figure above as a
+claim about speed only. One measured window with zero misses is consistent with safety; it
+is not evidence of it.**
 
 ### Ablation: what each part of the graph costs
 
@@ -602,7 +622,9 @@ selection. Unresolved.
 ### Other known gaps
 
 - **No worker pool.** Indexing is single-threaded; the design specifies parallel parsing.
-- **Never run against a live org.**
+- **Run against a live org exactly once.** The harness, `deploy` and `--verify-coverage` ran
+  against scratch orgs on 2026-10-12 ([findings](docs/USER-TESTING.md#live-org-2026-10-12)).
+  No sandbox or production org has ever run it.
 - **`alwaysRun` globs do not match backslash paths.** Latent — git emits forward slashes and
   the indexer normalises — but pinned by a test.
 
@@ -651,7 +673,7 @@ fullTestLevel: RunLocalTests
 | --- | --- |
 | `sf testimpact index [--force] [--root-dir]` | Build/update the graph. Offline. |
 | `sf testimpact analyze --base <ref> [--head] [--json] [--fail-on-fallback]` | Report the tests to run. Offline. |
-| `sf testimpact deploy --base <ref> [--verify-coverage --target-org] [--dry-run]` | Wrap `sf project deploy start`. Only `--verify-coverage` contacts an org. |
+| `sf testimpact deploy --base <ref> [--verify-coverage --target-org] [--dry-run] [-- <deploy flags>]` | Wrap `sf project deploy start`. Only `--verify-coverage` contacts an org before the deploy itself. Flags for the underlying deploy (`--source-dir`, `--ignore-conflicts`, `--wait`, ...) go after `--`. |
 
 `sf testimpact index` and `sf testimpact` are the same command; the topic root is the
 command's real id and `index` is an alias, so either form works.

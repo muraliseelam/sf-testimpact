@@ -299,7 +299,67 @@ test names, outcomes, durations and redacted exclusion reasons, and nothing else
 
 ### 8.4 Budget
 
-The one retained apex-recipes CI run took roughly 25 minutes for one commit (§3b). A
-30-commit window is therefore around 12 hours of org time, a 200-commit window several days,
-and Developer Edition Dev Hubs cap active scratch orgs in single digits. Run in batches with
-`--max-commits`; the store makes every batch resumable and refuses to mix windows.
+**Measured, not estimated:** one apex-recipes commit — tracked deploy, full suite of about
+300 test methods, and the flake re-check — took about 2.5 minutes of wall clock on the first
+live run, against the 25 minutes §3b had taken from the one retained CI run, which included
+scratch-org creation. Thirty commits is therefore under 90 minutes of org time, not 12 hours.
+
+**The binding limit is not time but `DailyAsyncApexTests`.** A scratch org may queue at most
+20 × (its number of test classes) test classes per rolling 24 hours — 1,360 for apex-recipes'
+68 classes. Every full run queues every test class, so one org supports about 20 full runs
+of apex-recipes, and the first live run found this the hard way: the 22nd suite and every
+one after it failed to enqueue, and the CLI reported only "An unknown exception occurred"
+(`sf org list limits` showed `DailyAsyncApexTests max 1360 remaining -1`). Before a run,
+divide the limit by the test-class count and plan one scratch org per that many commits;
+the store does not care which org produced which outcomes, so the window can continue in
+a fresh org by re-running the same command with a different `--target-org`.
+
+Developer Edition Dev Hubs also cap active scratch orgs in single digits. Run in batches
+with `--max-commits`; the store makes every batch resumable and refuses to mix windows.
+
+### 8.5 What the first run produced
+
+Run on 2026-10-12 against two scratch orgs created from apex-recipes' own definition. Window:
+`9802930d..87c1c9b6`, first-parent, `--only-source-changes`, which is 30 commits of the 204 in
+the range, plus the base as baseline. Artifacts: the store
+([fn-observations.ndjson](measurements/fn-observations.ndjson)), the scored report
+([false-negative-rate.json](measurements/false-negative-rate.json)) and the transcript
+([fn-harness-run.txt](measurements/fn-harness-run.txt)).
+
+| | `full` (default) | `widen` | `strict` |
+| --- | --- | --- | --- |
+| Commits scored | 30 | 30 | 30 |
+| Newly-failing (test, commit) pairs | 2 | 2 | 2 |
+| False negatives | **0** | **0** | **0** |
+| False-negative rate | not measurable | not measurable | not measurable |
+| Fallback rate | 83.3% (25/30) | 36.7% (11/30) | 36.7% (11/30) |
+| Reduction (tests not run / tests available) | 16.8% (1,598 of 1,921 run) | 39.4% (1,164 of 1,921) | 39.5% (1,162 of 1,921) |
+| Flaky, excluded | 0 | 0 | 0 |
+| Commits excluded | 1 (the base: Prompt metadata rejected by the current API) | | |
+
+**The rate is withheld**, as §6 requires: two pairs is not a denominator. The counts are the
+result.
+
+**Where the two pairs came from, and what they do and do not show.** Both are at `7d65ac49`
+(upstream commit message "doc: improved doc generation"): `ApexClassUtilities_Tests.
+testGetRelatedClassesFromClassBodyPositive` and
+`RelatedCodeTabsController_Tests.testGetRelatedClassesPositive` passed at the previous
+commit, failed here, and pass again at the next commit, which is upstream's "fix: related
+classes parsing". That is a real regression in a real history, caught by the harness. It is
+not evidence about the graph: the commit also touched LWC files, which force a full run
+under every policy, so all three policies "selected" those tests by running everything. A
+window that exercises the selector on a regression needs a regression in a commit that does
+not also trip a fallback.
+
+**One test failed at every commit:** `CustomMetadataRecipes_Tests.testBucketingContactAttendancePositive`,
+in both orgs. It never passed, so it is never newly failing and counts nowhere. It is a
+property of running apex-recipes in a scratch org that has only what the repository deploys,
+not of the tool.
+
+**Outcome counts** rose from 302 methods at the oldest commit to 322 at the newest, with 61
+to 68 test classes in the graph over the same range; no `Skip` outcomes were recorded.
+
+**Comparability with the offline window.** The README's selection-quality table measures a
+different 30 commits (the 30 most recent touching `.cls`/`.trigger` up to the same head, not
+first-parent, not source-change filtered), so its fallback and reduction figures differ from
+the ones above. Both are correct for their window; neither is "the" number.

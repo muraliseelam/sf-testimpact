@@ -60,11 +60,15 @@ No org is authenticated to `sf` on the measuring machine, and task 1.3 found no 
 with a numerator, so the only reachable run (apex-recipes) yields a recorded null result. The
 exact commands are in `docs/CORRECTNESS-PLAN.md` §8.
 
-- [ ] 5.1 Authenticate a Dev Hub and confirm scratch-org creation.
-- [ ] 5.2 Run the harness across the window, in batches if org limits require.
-- [ ] 5.3 Write the result to `docs/measurements/false-negative-rate.json`.
-- [ ] 5.4 Update the README's "Correctness: still unmeasured" section with the measured
+- [x] 5.1 Authenticate a Dev Hub and confirm scratch-org creation. Done 2026-10-12: Dev Hub
+      `partner-pbo`; scratch orgs `fn-run` and `fn-run-2` from apex-recipes' definition.
+- [x] 5.2 Run the harness across the window, in batches if org limits require. Done: 30
+      source-changing commits ending at `87c1c9b`, over two orgs because the first
+      exhausted `DailyAsyncApexTests` after 21 full suites (`docs/CORRECTNESS-PLAN.md` §8.4).
+- [x] 5.3 Write the result to `docs/measurements/false-negative-rate.json`. Done.
+- [x] 5.4 Update the README's "Correctness: still unmeasured" section with the measured
       result — or, if the denominator is insufficient, with the null finding stated plainly.
+      Done: 2 newly-failing pairs, 0 false negatives under every policy, rate withheld.
 
 ## 6. Validation
 
