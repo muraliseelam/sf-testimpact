@@ -232,6 +232,25 @@ describe('reading straight from a store', () => {
     expect(reportFromStore(store, new Map()).window).toEqual(WINDOW);
   });
 
+  it('does not count a baseline-only commit as scored', () => {
+    // The harness always executes the base commit as a baseline, so counting it would be
+    // wrong by exactly one on every real window.
+    const { store } = openStore(memoryFs(), 'store.ndjson', WINDOW);
+    store.append({ commit: 'c0', results: [pass('A')], selected: [], fellBack: false, totalTests: 1, baselineOnly: true });
+    store.append({ commit: 'c1', results: [pass('A')], selected: ['A'], fellBack: false, totalTests: 1 });
+    store.append({ commit: 'c2', results: [pass('A')], selected: ['A'], fellBack: false, totalTests: 1 });
+
+    const selections = new Map([
+      ['c1', { selected: ['A'], fellBack: false, totalTests: 1 }],
+      ['c2', { selected: ['A'], fellBack: false, totalTests: 1 }],
+    ]);
+    const report = reportFromStore(store, new Map([['full', selections]]));
+    expect(report.perPolicy[0]?.commitsScored).toBe(2);
+    // A commit with no selection for the policy becomes baseline-only too, and is not scored.
+    const partial = reportFromStore(store, new Map([['full', new Map([['c2', { selected: ['A'], fellBack: false, totalTests: 1 }]])]]));
+    expect(partial.perPolicy[0]?.commitsScored).toBe(1);
+  });
+
   it('carries excluded commits through from the store', () => {
     const { store } = openStore(memoryFs(), 'store.ndjson', WINDOW);
     store.append({ commit: 'c1', results: [], selected: [], fellBack: false, totalTests: 0, excluded: 'deploy failed' });

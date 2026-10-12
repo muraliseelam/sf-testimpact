@@ -134,7 +134,9 @@ resumes rather than restarts.
 | `sf apex test run --json` ingestion | `sfJsonAdapter` — implemented |
 | JUnit XML ingestion | `junitXmlAdapter` — implemented |
 | **`sf apex test run -r human` ingestion** | **`sfHumanAdapter` — added for this plan**, 11 tests, fixture taken verbatim from a real apex-recipes CI log |
-| Stage 3 (execute against an org) | **Not built.** Requires credentials this project does not have. |
+| Resumable per-commit store | `src/bench/observationStore.ts` — NDJSON, keyed by window identity, truncated tail tolerated; adversarial cases tested |
+| Stage 3 (execute against an org) | **Built; never run against an org.** `src/bench/execute.ts` is the driver with every org-touching call injected; `src/bench/sfCli.ts` decides what `sf` process output means (a failing test run is a *completed* run, and reasons are redacted); `bench/execute.js` supplies the processes, a worktree and the store. The offline half has been exercised with `--dry-run` against apex-recipes ([artifact](measurements/fn-harness-dry-run.txt)). See §8. |
+| Stage 4 report | `src/bench/fnReport.ts` withholds the rate below 30 newly-failing pairs and reports raw counts instead; `bench/fn-report.js` recomputes selections per policy from git blobs and writes the artifact |
 
 The human-format adapter was the missing link for §3a: without it the only surviving record of
 public CI outcomes is unparseable. Its tests cover pass, fail and skip rows, a failure message
@@ -182,3 +184,85 @@ number with a caveat.
   the tool's biggest known hole. That limit must be stated with any result it produces.
 - **A green window measures nothing.** If the chosen window has no newly-failing pairs, the
   run produces no denominator regardless of how long it took.
+
+## 8. Running the harness
+
+Everything below the org line is built and tested. **Nothing below has been run against an
+org.** The commands are the ones the code expects; the first live run will be the first time
+`sf` output meets `src/bench/sfCli.ts` outside a unit test, and anything that run reveals
+belongs in this section.
+
+### 8.1 What the operator supplies, and this repository does not
+
+1. **A Dev Hub** authenticated to the `sf` CLI, with scratch-org allocation, and a scratch org
+   created from the measured repository's own definition so its features match:
+
+   ```bash
+   sf org create scratch --definition-file config/project-scratch-def.json --alias fn-run --duration-days 30
+   ```
+
+   Credentials live only in the CLI's own store. `bench/execute.js` passes `--target-org
+   <alias>` to `sf` and never reads, logs or writes a token; anything credential-shaped that
+   arrives in a failure message is redacted before it reaches the store (`redactSecrets`,
+   tested in `test/unit/bench.execute.test.ts` and `test/unit/bench.sfCli.test.ts`).
+
+2. **A clone of the repository to measure**, and a second path for the worktree the harness
+   checks out commit by commit. The harness never touches the clone's own working tree.
+
+3. **A window.** `--base` and `--head`; the harness executes `base..head` first-parent, oldest
+   first, with `base` itself run first as the baseline the first commit is scored against.
+   The repository this project can reach, apex-recipes, is green by construction (§3a and
+   [fn-window.json](measurements/fn-window.json)), so a run on it yields "not measurable from
+   this data" with a denominator of zero. That is a legitimate recorded result and would be
+   this project's first live-org run, but it is not a rate.
+
+4. A built checkout of this repository: `npm ci && npm run build`. The `bench/` scripts import
+   from `lib/`.
+
+### 8.2 The commands
+
+```bash
+# 1. Prove the offline half on the window before spending org time. Prints the window, the
+#    exact sf commands that would run, and the selection at every commit. Touches nothing.
+node bench/execute.js --dry-run --repo ../apex-recipes --base <sha> --head <sha>
+
+# 2. Execute. Resumable: re-run the same command to continue after an interruption or a
+#    scratch-org limit. --max-commits bounds how many NEW commits one invocation records.
+node bench/execute.js --repo ../apex-recipes --worktree ../apex-recipes-fn-worktree \
+     --target-org fn-run --base <sha> --head <sha> --max-commits 20
+
+# 3. Score. Offline. Recomputes the selection under full, widen and strict from git blobs,
+#    scores the store, prints the report and writes the artifact task 5.3 names.
+node bench/fn-report.js --repo ../apex-recipes --store docs/measurements/fn-observations.ndjson
+```
+
+The store defaults to `docs/measurements/fn-observations.ndjson` because it is the evidence
+the report is computed from and belongs with the other artifacts. It carries commit SHAs,
+test names, outcomes, durations and redacted exclusion reasons, and nothing else.
+
+### 8.3 Decisions the entry point makes, and why
+
+- **Deploys use source tracking by default.** `sf project deploy start` with no source flags
+  on a source-tracked org deploys changed files *and removes deleted ones*; the `sf` help for
+  `project delete source` says so directly. A plain `--source-dir` deploy would leave a test
+  class deleted mid-window alive in the org, where `RunLocalTests` would keep running it and
+  its failures would be scored against a selector that correctly never saw it.
+  `--deploy-mode source-dir` exists for an org without tracking, and a result produced with it
+  must be read knowing deletions were not propagated.
+- **A failing test run is a completed run.** `sf apex run test` exits non-zero when any test
+  fails. Treating that as a broken run would exclude exactly the commits the metric is built
+  from, so the exit status is not what decides: output carrying a `tests` array is a result,
+  and output without one is an exclusion with the CLI's message as the reason.
+- **Failures are re-run once, alone.** A test that fails and then passes at the same commit is
+  recorded as flaky at that commit; the first run's `Fail` is kept as the observation. This
+  catches a flaky failure, not a flaky pass (§7).
+- **Every first-parent commit is executed, not only those touching Apex.** The scorer defines
+  "newly failing" against the previous observation, so skipping commits would score a
+  regression against the wrong predecessor.
+
+### 8.4 Budget
+
+The one retained apex-recipes CI run took roughly 25 minutes for one commit (§3b). A
+30-commit window is therefore around 12 hours of org time, a 200-commit window several days,
+and Developer Edition Dev Hubs cap active scratch orgs in single digits. Run in batches with
+`--max-commits`; the store makes every batch resumable and refuses to mix windows.

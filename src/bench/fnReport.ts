@@ -83,8 +83,16 @@ const NOT_MEASURABLE = 'not measurable from this data';
 export function buildFnReport(input: FnReportInput): FnReport {
   const minDenominator = input.minDenominator ?? MIN_DENOMINATOR;
 
+  // A baseline-only observation supplies the predecessor state for the commit after it and
+  // is scored against nothing itself, so it is not a scored commit. Counting it was wrong
+  // by exactly one on every real window, because the harness always executes the base.
   const perPolicy = input.perPolicy.map(({ policy, observations }) =>
-    toPolicyResult(policy, summarise(observations), observations.length, minDenominator),
+    toPolicyResult(
+      policy,
+      summarise(observations),
+      observations.filter((o) => o.baselineOnly !== true).length,
+      minDenominator,
+    ),
   );
 
   const measurable = perPolicy.length > 0 && perPolicy.every((p) => p.rateReportable);

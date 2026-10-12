@@ -1,6 +1,8 @@
 # sf-testimpact — Design
 
-**Status:** Draft for review. No implementation code exists yet.
+**Status:** Implemented and published (`sf-testimpact` on npm, v1.x). This document is kept
+as the design of record: where the implementation deliberately departed from the original
+draft, the section says so and says why, rather than being silently rewritten.
 **Audience:** Reviewers deciding whether to depend on this tool, and contributors.
 
 ---
@@ -858,6 +860,21 @@ prints them together.
 
 Output: a table to stdout, plus `bench/results/<repo>-<timestamp>.json`.
 
+### 11.3 Producing the historical results: the org execution stage
+
+`bench/run.js` consumes test results that already exist. No public Salesforce repository
+publishes per-commit results, so the harness also has a stage that *produces* them: for each
+commit in a window, check the tree out into a worktree the harness owns, deploy it to a
+scratch org, run the **full** suite, and append per-test outcomes to a resumable store
+(`src/bench/execute.ts`, `src/bench/observationStore.ts`, entry point `bench/execute.js`).
+The full suite and not the selection, because the metric is defined over tests the selector
+skipped; running only the selection would make a false negative unobservable by construction.
+`bench/fn-report.js` then recomputes the selection under each `entryPointPolicy` from git
+blobs and scores the store, withholding the rate below a 30-pair denominator.
+
+How to run it, what it needs, and what it has and has not been run against are in
+[CORRECTNESS-PLAN.md](CORRECTNESS-PLAN.md) §8.
+
 ---
 
 ## 12. Known false-negative sources
@@ -938,6 +955,9 @@ src/
   deploy/{plan,coverage,toolingClient}.ts         # deploy args, 75% rule, Tooling API
   bench/{run,adapters,ablation,                   # benchmark harness (not published)
          falseNegatives,report}.ts
+  bench/{observationStore,execute,sfCli,          # false-negative harness stages 3 and 4:
+         fnReport}.ts                             # resumable store, org execution driver,
+                                                  # sf CLI output interpretation, scoring
   graph/{model,serialize,store,incremental}.ts
   query/{changeSet,closure,selection,safety,analyze}.ts
   config/{schema,load}.ts
@@ -945,7 +965,7 @@ src/
   {types,version,paths,project}.ts                # shared types, version constants, helpers
 test/                                             # unit + fixture-based integration
 test/fixtures/sample-project/                     # a real, small sfdx project
-bench/
+bench/{run,ablate,execute,fn-report,replay}.js    # thin real-I/O entry points over src/bench
 docs/DESIGN.md
 ```
 

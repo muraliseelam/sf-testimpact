@@ -1,0 +1,20 @@
+$ node ../sf-testimpact/bench/execute.js --dry-run --repo apex-recipes --base 87c1c9b --head 5001207 --worktree apex-recipes-fn-worktree --store fn-observations.ndjson
+# apex-recipes cloned from https://github.com/trailheadapps/apex-recipes on 2026-10-11, HEAD 5001207; the six commits are dependency bumps outside force-app
+window: https://github.com/trailheadapps/apex-recipes
+  87c1c9b674..50012075e9: 6 commit(s), plus the base as baseline
+
+dry run: no org is contacted and nothing is written.
+  deploy per commit:  sf project deploy start --target-org <alias> --json --wait 60 --ignore-conflicts   (cwd: worktree)
+  full suite:         sf apex run test --result-format json --wait 120 --test-level RunLocalTests --target-org <alias>
+  flake re-check:     sf apex run test ... --test-level RunSpecifiedTests --tests <each failure>
+  store:              fn-observations.ndjson (would be created)
+  worktree:           apex-recipes-fn-worktree
+
+selection under entryPointPolicy: full, index at each commit, diff against first parent
+  87c1c9b674  baseline (outcomes only, no selection scored)
+  7d061857f3  selected 0 of 68
+  209d01327d  selected 0 of 68
+  faf5564900  selected 0 of 68
+  f2d4692860  selected 0 of 68
+  983acdd3b6  selected 0 of 68
+  50012075e9  selected 0 of 68

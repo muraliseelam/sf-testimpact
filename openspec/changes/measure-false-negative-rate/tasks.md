@@ -35,6 +35,14 @@ one that cannot proceed without them.
 - [x] 3.5 Never write credentials to any artifact or log.
 - [x] 3.6 Unit tests with injected fakes — no org required — covering: a clean commit, a
       commit with failures, a deploy failure, a flaky test, and resume after interruption.
+- [x] 3.7 Wire the driver to the `sf` CLI. `src/bench/sfCli.ts` interprets deploy and test-run
+      process output (a failing test run is a completed run; exclusion reasons are redacted and
+      clipped) and is unit-tested with recorded output; `bench/execute.js` supplies the
+      processes, a git worktree the harness owns, and the store file, with `--dry-run`,
+      `--max-commits` batching and resume. Exercised with `--dry-run` against apex-recipes
+      (`docs/measurements/fn-harness-dry-run.txt`); never run against an org.
+- [x] 3.8 `bench/fn-report.js`: recompute the selection under every policy from git blobs,
+      score the store, print the report, write the artifact task 5.3 names.
 
 ## 4. Wire to the scorer and report
 
@@ -46,6 +54,11 @@ one that cannot proceed without them.
 - [x] 4.4 Unit tests for both the sufficient and insufficient denominator paths.
 
 ## 5. Execute (requires org credentials)
+
+Status 2026-10-11: blocked on two things the repository owner supplies, neither of them code.
+No org is authenticated to `sf` on the measuring machine, and task 1.3 found no public window
+with a numerator, so the only reachable run (apex-recipes) yields a recorded null result. The
+exact commands are in `docs/CORRECTNESS-PLAN.md` §8.
 
 - [ ] 5.1 Authenticate a Dev Hub and confirm scratch-org creation.
 - [ ] 5.2 Run the harness across the window, in batches if org limits require.

@@ -26,10 +26,12 @@ with the rule that fired.
 
 ## Status
 
-Pre-release, `0.1.0`. It has **no users, no installs, and no production deployments**. It
-has never been run against a live Salesforce org: `index` and `analyze` are entirely
-offline, and the one org-touching path (`deploy --verify-coverage`) has been exercised only
-against mocks. The false-negative rate — the headline correctness metric this tool is
+Published on npm as `sf-testimpact` 1.x. It has been installed and driven end to end by its
+maintainer ([docs/USER-TESTING.md](docs/USER-TESTING.md)); it has **no known production
+deployments**. It has never been run against a live Salesforce org: `index` and `analyze`
+are entirely offline, `deploy` and `deploy --verify-coverage` have been exercised only
+against mocks, and the harness that would measure the false-negative rate has been exercised
+only offline. The false-negative rate — the headline correctness metric this tool is
 designed around — **has never been measured**; see
 [Correctness: still unmeasured](#correctness-still-unmeasured).
 
@@ -420,16 +422,34 @@ failing at `c`. Neither repository benchmarked here publishes those, and no publ
 repository was found that does. Generating them means running the full suite at every commit
 against a real org, which this project has never done.
 
+**The harness that would generate them is now built and is not the blocker.**
+`bench/execute.js` deploys each commit of a window to a scratch org, runs the full suite,
+and appends per-test outcomes to a resumable store; `bench/fn-report.js` scores the store
+under every `entryPointPolicy` and withholds the rate below a 30-pair denominator. The logic
+is unit-tested with fakes and recorded CLI output, and the offline half was exercised with
+`--dry-run` against apex-recipes
+([artifact](docs/measurements/fn-harness-dry-run.txt)). It has never been pointed at an
+org. Two things stand between it and a number, and neither is code:
+
+- **An org.** A Dev Hub with scratch-org allocation, authenticated to the `sf` CLI on the
+  machine running it. None is.
+- **A window with a numerator.** A survey of eight public Salesforce repositories' CI history
+  found **zero** runs containing a failing Apex *test*
+  ([artifact](docs/measurements/fn-window.json)). Running the harness on apex-recipes would
+  produce a real, recorded null result — "not measurable from this data" — and would be this
+  project's first live-org run of anything, but it cannot produce a rate. A rate needs a
+  history with real regressions in it, which in practice means a private repository.
+
 A search for an existing public benchmark for Salesforce change-impact test selection turned
 up nothing usable as a substitute. Building one, with generator-recorded ground truth, is
 open work that this project has not done.
 
-How it would be measured, what data that needs, and which harness pieces already exist, are
-specified in [docs/CORRECTNESS-PLAN.md](docs/CORRECTNESS-PLAN.md). Two findings from writing
-it are worth stating here: public CI for apex-recipes does run Apex tests, but the job was
-**skipped on 25 of the 25 most recent PR runs** (it needs org credentials), and the one
-retained run that did execute reports a **100% pass rate** — a metric whose numerator is
-failures cannot be built from repositories selected for not having any.
+How it would be measured, what data that needs, how to run the harness, and which pieces
+exist are specified in [docs/CORRECTNESS-PLAN.md](docs/CORRECTNESS-PLAN.md). Two findings
+from writing it are worth stating here: public CI for apex-recipes does run Apex tests, but
+the job was **skipped on 25 of the 25 most recent PR runs** (it needs org credentials), and
+the one retained run that did execute reports a **100% pass rate** — a metric whose
+numerator is failures cannot be built from repositories selected for not having any.
 
 Until that measurement lands, **treat every reduction figure above as a claim about speed only.
 Nothing here is evidence about safety.**

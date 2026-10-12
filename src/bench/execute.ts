@@ -238,16 +238,34 @@ export function redactSecrets(text: string): string {
 /** Runs a command and returns its stdout, or throws. Injected so no test spawns a process. */
 export type CommandRunner = (argv: readonly string[]) => string;
 
+export interface CliTestRunnerOptions {
+  /**
+   * Minutes `sf apex run test` waits for the run to finish. Default 60.
+   *
+   * A large suite can outlast the default, and a timed-out run is recorded as an excluded
+   * commit rather than as outcomes, so the budget has to be set for the suite being measured.
+   */
+  readonly waitMinutes?: number;
+}
+
 /**
  * Build a `runTests` from a command runner, parsing with the existing `sfJsonAdapter`.
  *
  * JSON is used rather than the human report because for runs we control it is authoritative
  * and stable; `sfHumanAdapter` exists for reading historical CI logs where JSON was never
  * captured, which is a different problem.
+ *
+ * The runner must return stdout for a run that *completed with failures*: `sf apex run test`
+ * exits non-zero whenever a test fails, and throwing on that would exclude every commit the
+ * metric is built from. `sfCli.ts` has the function that makes that distinction.
  */
-export function makeCliTestRunner(run: CommandRunner): ExecuteDeps['runTests'] {
+export function makeCliTestRunner(
+  run: CommandRunner,
+  options: CliTestRunnerOptions = {},
+): ExecuteDeps['runTests'] {
+  const wait = String(options.waitMinutes ?? 60);
   return (_commit, only) => {
-    const argv = ['apex', 'run', 'test', '--result-format', 'json', '--wait', '60'];
+    const argv = ['apex', 'run', 'test', '--result-format', 'json', '--wait', wait];
     if (only !== undefined && only.length > 0) {
       argv.push('--test-level', 'RunSpecifiedTests');
       // One --tests per test: `sf` rejects a comma-separated list.
