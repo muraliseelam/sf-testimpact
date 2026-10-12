@@ -96,6 +96,18 @@ export function projectAt(git, commit, overrideSourcePaths) {
   return { sourcePaths: sourcePaths.map((p) => p.replace(/\\/g, '/').replace(/\/+$/, '')), namespace };
 }
 
+/**
+ * Whether `commit` changes anything under the project's source paths, relative to `parent`.
+ *
+ * Used by `--only-source-changes`: a commit whose diff touches nothing under the source
+ * paths deploys nothing and cannot change a test outcome, so executing it buys a full suite
+ * run for no information.
+ */
+export function touchesSourcePaths(git, commit, parent, sourcePaths) {
+  const out = git(['diff', '--name-only', parent, commit, '--', ...sourcePaths]);
+  return out.split('\n').some((line) => line.trim() !== '');
+}
+
 function underSourcePaths(path, sourcePaths) {
   return sourcePaths.some((sp) => sp === '.' || sp === '' || path === sp || path.startsWith(`${sp}/`));
 }

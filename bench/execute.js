@@ -13,7 +13,7 @@
  *                         [--policy full|widen|strict] [--source-paths a,b]
  *                         [--deploy-mode tracking|source-dir]
  *                         [--deploy-wait <min>] [--test-wait <min>]
- *                         [--max-commits <n>] [--no-recheck] [--dry-run]
+ *                         [--only-source-changes] [--max-commits <n>] [--no-recheck] [--dry-run]
  *
  *   --repo         the repository whose history is the window; never checked out or modified
  *   --worktree     a separate checkout the harness owns. Created with `git worktree add` if
@@ -36,6 +36,13 @@
  *                  explicitly and does NOT propagate deletions, so a class deleted mid-window
  *                  lingers in the org. Use it only against an org without tracking, and read
  *                  the result knowing that
+ *   --only-source-changes
+ *                  skip commits whose diff from their first parent touches nothing under the
+ *                  project's source paths (dependency bumps, CI, docs). Exact for the metric,
+ *                  not an approximation: such a commit deploys nothing, so the org state and
+ *                  every test outcome at it are those of the last source-changing commit, and
+ *                  the scorer's "previous observation" therefore has the same deployed source
+ *                  as c^. On apex-recipes this removes about three quarters of a window
  *   --max-commits  stop after recording this many NEW commits. Resume by re-running: already
  *                  recorded commits are skipped. This is how a window is run in batches
  *                  across scratch-org limits
@@ -53,7 +60,7 @@ import { dirname, relative, resolve as resolvePath } from 'node:path';
 import { executeWindow, makeCliTestRunner, redactSecrets } from '../lib/bench/execute.js';
 import { WindowMismatchError, openStore } from '../lib/bench/observationStore.js';
 import { deployResultFromProcess, parseRevList, testRunStdoutFromProcess, windowFor } from '../lib/bench/sfCli.js';
-import { makeGit, makeIndexer, makeSelector, parseArgs, projectAt } from './replay.js';
+import { makeGit, makeIndexer, makeSelector, parentOf, parseArgs, projectAt, touchesSourcePaths } from './replay.js';
 
 const args = parseArgs(process.argv);
 const log = (message) => process.stderr.write(`${redactSecrets(message)}\n`);
@@ -65,7 +72,7 @@ function usage(problem) {
   log('usage: node bench/execute.js --repo <path> --worktree <path> --target-org <alias> --base <sha>');
   log('       [--head <sha>] [--store <file>] [--policy full|widen|strict] [--source-paths a,b]');
   log('       [--deploy-mode tracking|source-dir] [--deploy-wait <min>] [--test-wait <min>]');
-  log('       [--max-commits <n>] [--no-recheck] [--dry-run]');
+  log('       [--only-source-changes] [--max-commits <n>] [--no-recheck] [--dry-run]');
   process.exit(2);
 }
 
@@ -107,10 +114,21 @@ try {
 } catch {
   // No remote: the path is the only name there is.
 }
-const { identity, commits } = windowFor(repoName, baseSha, headSha, revList);
+const onlySourceChanges = args['only-source-changes'] === true;
+const scoped = onlySourceChanges
+  ? revList.filter((c) => {
+      const parent = parentOf(repo, c);
+      if (parent === null) return true;
+      return touchesSourcePaths(git, c, parent, projectAt(git, c, sourcePathsOverride).sourcePaths);
+    })
+  : revList;
+const { identity, commits } = windowFor(repoName, baseSha, headSha, scoped);
 
 log(`window: ${identity.repo}`);
 log(`  ${baseSha.slice(0, 10)}..${headSha.slice(0, 10)}: ${revList.length} commit(s), plus the base as baseline`);
+if (onlySourceChanges) {
+  log(`  --only-source-changes: ${scoped.length} of ${revList.length} change something under the source paths; the rest deploy nothing and are skipped`);
+}
 
 // ---------------------------------------------------------------------------------------
 // Offline half: selection at each commit, from git blobs
