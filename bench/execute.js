@@ -43,6 +43,23 @@
  *                  every test outcome at it are those of the last source-changing commit, and
  *                  the scorer's "previous observation" therefore has the same deployed source
  *                  as c^. On apex-recipes this removes about three quarters of a window
+ *   --pre-deploy-dir <dir[,dir]>
+ *                  deploy these directories (relative to the worktree, when present at the
+ *                  commit) on their own BEFORE the main deploy. Needed where the platform
+ *                  refuses to compile metadata in the same deploy as something it references:
+ *                  Apex that uses a DataWeave script fails with "Invalid type:
+ *                  DataWeaveScriptResource.<name>" unless the script already exists in the
+ *                  org, even though source tracking puts both in one deploy. apex-recipes
+ *                  needs `force-app/main/default/dw`. A pre-deploy failure is the commit's
+ *                  exclusion reason, prefixed with the directory
+ *   --retry-excluded
+ *                  execute again every commit the store recorded as excluded. Their exclusion
+ *                  records are removed from the store first (a copy of the store as it was
+ *                  is kept under bench/results/) so an exclusion caused by the harness
+ *                  environment rather than by the commit can be corrected. A commit that
+ *                  fails again is recorded as excluded again. This is the one operation that
+ *                  rewrites the store, it is logged, and it never touches a commit that has
+ *                  outcomes
  *   --max-commits  stop after recording this many NEW commits. Resume by re-running: already
  *                  recorded commits are skipped. This is how a window is run in batches
  *                  across scratch-org limits
@@ -54,8 +71,8 @@
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { dirname, relative, resolve as resolvePath } from 'node:path';
+import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, relative, resolve as resolvePath } from 'node:path';
 
 import { executeWindow, makeCliTestRunner, redactSecrets } from '../lib/bench/execute.js';
 import { WindowMismatchError, openStore } from '../lib/bench/observationStore.js';
@@ -72,7 +89,8 @@ function usage(problem) {
   log('usage: node bench/execute.js --repo <path> --worktree <path> --target-org <alias> --base <sha>');
   log('       [--head <sha>] [--store <file>] [--policy full|widen|strict] [--source-paths a,b]');
   log('       [--deploy-mode tracking|source-dir] [--deploy-wait <min>] [--test-wait <min>]');
-  log('       [--only-source-changes] [--max-commits <n>] [--no-recheck] [--dry-run]');
+  log('       [--only-source-changes] [--pre-deploy-dir <dir[,dir]>] [--retry-excluded]');
+  log('       [--max-commits <n>] [--no-recheck] [--dry-run]');
   process.exit(2);
 }
 
@@ -97,6 +115,9 @@ const maxCommits = args['max-commits'] === undefined ? Infinity : Number(args['m
 const sourcePathsOverride =
   typeof args['source-paths'] === 'string' ? args['source-paths'].split(',').filter(Boolean) : undefined;
 const storePath = resolvePath(typeof args.store === 'string' ? args.store : 'docs/measurements/fn-observations.ndjson');
+const preDeployDirs =
+  typeof args['pre-deploy-dir'] === 'string' ? args['pre-deploy-dir'].split(',').filter(Boolean) : [];
+const retryExcluded = args['retry-excluded'] === true;
 
 // ---------------------------------------------------------------------------------------
 // The window
@@ -194,6 +215,13 @@ function deploy(commit) {
   } catch (error) {
     return { ok: false, reason: redactSecrets(`checkout failed: ${error instanceof Error ? error.message : String(error)}`) };
   }
+  for (const dir of preDeployDirs) {
+    if (!existsSync(join(worktree, dir))) continue;
+    const pre = deployResultFromProcess(
+      runSf(['project', 'deploy', 'start', '--target-org', targetOrg, '--json', '--wait', deployWait, '--ignore-conflicts', '--source-dir', dir], worktree),
+    );
+    if (!pre.ok) return { ok: false, reason: `pre-deploy ${dir}: ${pre.reason ?? 'no reason reported'}` };
+  }
   return deployResultFromProcess(runSf(deployArgv(commit), worktree));
 }
 
@@ -209,6 +237,7 @@ const runTests = makeCliTestRunner(
 if (dryRun) {
   log('');
   log('dry run: no org is contacted and nothing is written.');
+  for (const dir of preDeployDirs) log(`  pre-deploy:         sf project deploy start --source-dir ${dir} ...   (when ${dir} exists at the commit)`);
   log(`  deploy per commit:  sf ${deployArgv(commits[commits.length - 1]).join(' ')}   (cwd: worktree)`);
   log(`  full suite:         sf apex run test --result-format json --wait ${testWait} --test-level RunLocalTests --target-org ${targetOrg ?? '<alias>'}`);
   log(`  flake re-check:     sf apex run test ... --test-level RunSpecifiedTests --tests <each failure>`);
@@ -237,6 +266,43 @@ const fs = {
   exists: (p) => existsSync(p),
   mkdirp: (p) => mkdirSync(p, { recursive: true }),
 };
+
+if (retryExcluded && existsSync(storePath)) {
+  // The only operation that rewrites the store. Exclusion records are removed so the driver
+  // executes those commits again; everything with outcomes is kept byte for byte, and the
+  // store as it was is copied aside first.
+  const raw = readFileSync(storePath, 'utf8').split('\n');
+  const lastNonEmpty = raw.reduce((last, line, i) => (line.trim() === '' ? last : i), -1);
+  const kept = [];
+  const dropped = [];
+  for (const [i, line] of raw.entries()) {
+    const text = line.trim();
+    if (text === '') continue;
+    let record;
+    try {
+      record = JSON.parse(text);
+    } catch {
+      if (i === lastNonEmpty) continue; // A truncated tail from an interrupted run; openStore drops it too.
+      throw new Error(`${storePath} is corrupt at line ${i + 1}; refusing to rewrite it.`);
+    }
+    if (record.kind === 'commit' && record.excluded !== undefined) {
+      dropped.push(record.commit);
+      continue;
+    }
+    kept.push(text);
+  }
+  if (dropped.length > 0) {
+    const backupDir = resolvePath('bench/results');
+    mkdirSync(backupDir, { recursive: true });
+    const backup = join(backupDir, `${basename(storePath)}.before-retry-${new Date().toISOString().replace(/[:.]/g, '-')}`);
+    copyFileSync(storePath, backup);
+    writeFileSync(storePath, `${kept.join('\n')}\n`, 'utf8');
+    log(
+      `--retry-excluded: removed ${dropped.length} exclusion record(s) so those commits run again ` +
+        `(${dropped.map((c) => c.slice(0, 10)).join(', ')}); the store as it was is at ${shown(backup)}`,
+    );
+  }
+}
 
 let opened;
 try {

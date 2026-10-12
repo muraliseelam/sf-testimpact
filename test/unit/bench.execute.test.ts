@@ -205,6 +205,39 @@ describe('commits that cannot be measured', () => {
     expect(store.toObservations()).toEqual([]);
   });
 
+  it('retries a failed test run once before excluding, and keeps the outcomes of the retry', () => {
+    // Seen live: `sf apex run test` failed before enqueuing anything, with no run visible in
+    // the org. That is the tooling, not the commit, and the deploy is already done.
+    const runTests = vi
+      .fn()
+      .mockReturnValueOnce({ ok: false, results: [], reason: 'An unknown exception occurred.' })
+      .mockReturnValueOnce({ ok: true, results: [pass('AccountTest', 'a')] });
+    const lines: string[] = [];
+    const store = newStore();
+    const report = executeWindow(deps({ runTests, log: (m) => lines.push(m) }), store, ['c1']);
+
+    expect(report.excluded).toEqual([]);
+    expect(report.recorded).toBe(1);
+    expect(runTests).toHaveBeenCalledTimes(2);
+    expect(lines.some((l) => l.includes('attempt 1 failed') && l.includes('retrying'))).toBe(true);
+  });
+
+  it('excludes with the last reason when every attempt fails, and honours testRunAttempts', () => {
+    const runTests = vi
+      .fn()
+      .mockReturnValueOnce({ ok: false, results: [], reason: 'first' })
+      .mockReturnValueOnce({ ok: false, results: [], reason: 'second' })
+      .mockReturnValueOnce({ ok: false, results: [], reason: 'third' });
+    const report = executeWindow(deps({ runTests }), newStore(), ['c1'], { testRunAttempts: 3 });
+
+    expect(runTests).toHaveBeenCalledTimes(3);
+    expect(report.excluded).toEqual([{ commit: 'c1', reason: 'test run failed: third' }]);
+
+    const once = vi.fn(() => ({ ok: false, results: [], reason: 'only' }));
+    executeWindow(deps({ runTests: once }), newStore(), ['c1'], { testRunAttempts: 1 });
+    expect(once).toHaveBeenCalledTimes(1);
+  });
+
   it('excludes a run that succeeds but reports no outcomes', () => {
     // Recording this as a clean commit would be a fabricated pass: we do not have the
     // outcomes, we merely failed to receive any.

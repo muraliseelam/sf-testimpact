@@ -70,6 +70,17 @@ export interface ExecuteOptions {
   readonly recheckFailures?: boolean;
   /** Treat the first commit as a baseline: outcomes only, no selection scored against it. */
   readonly firstCommitIsBaseline?: boolean;
+  /**
+   * How many times to attempt the full-suite run before excluding the commit. Default 2.
+   *
+   * Found on the first live run: `sf apex run test` can fail before the run is even
+   * enqueued (the CLI reported only "An unknown exception occurred", and the org shows no
+   * test run for that commit). That is a transient of the tooling, not a property of the
+   * commit, and excluding the commit for it would drop real outcomes from the window. One
+   * retry is cheap because the deploy is already done. The retry is logged; a commit that
+   * fails every attempt is excluded with the last reason, as before.
+   */
+  readonly testRunAttempts?: number;
 }
 
 export interface ExecuteReport {
@@ -96,7 +107,20 @@ export function executeWindow(
   options: ExecuteOptions = {},
 ): ExecuteReport {
   const recheckFailures = options.recheckFailures ?? true;
+  const attempts = Math.max(1, options.testRunAttempts ?? 2);
   const log = (message: string): void => deps.log?.(message);
+
+  const runFullSuite = (commit: string): TestRunResult => {
+    let last: TestRunResult = { ok: false, results: [], reason: 'no attempt made' };
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      last = deps.runTests(commit);
+      if (last.ok) return last;
+      if (attempt < attempts) {
+        log(`  test run attempt ${attempt} failed (${last.reason ?? 'no reason reported'}); retrying`);
+      }
+    }
+    return last;
+  };
 
   const excluded: { commit: string; reason: string }[] = [];
   const flakyObserved: { commit: string; test: string }[] = [];
@@ -120,7 +144,7 @@ export function executeWindow(
       continue;
     }
 
-    const run = deps.runTests(commit);
+    const run = runFullSuite(commit);
     if (!run.ok) {
       const reason = redactSecrets(`test run failed: ${run.reason ?? 'no reason reported'}`);
       store.append(excludedRecord(commit, reason));

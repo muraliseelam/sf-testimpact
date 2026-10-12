@@ -229,7 +229,8 @@ node bench/execute.js --dry-run --repo ../apex-recipes --base <sha> --head <sha>
 # 2. Execute. Resumable: re-run the same command to continue after an interruption or a
 #    scratch-org limit. --max-commits bounds how many NEW commits one invocation records.
 node bench/execute.js --repo ../apex-recipes --worktree ../apex-recipes-fn-worktree \
-     --target-org fn-run --base <sha> --head <sha> --max-commits 20
+     --target-org fn-run --base <sha> --head <sha> --only-source-changes \
+     --pre-deploy-dir force-app/main/default/dw --max-commits 20
 
 # 3. Score. Offline. Recomputes the selection under full, widen and strict from git blobs,
 #    scores the store, prints the report and writes the artifact task 5.3 names.
@@ -249,6 +250,37 @@ test names, outcomes, durations and redacted exclusion reasons, and nothing else
   its failures would be scored against a selector that correctly never saw it.
   `--deploy-mode source-dir` exists for an org without tracking, and a result produced with it
   must be read knowing deletions were not propagated.
+- **Some metadata must be deployed before the Apex that references it, and source tracking
+  does not know that.** Found on the first live run: every commit from apex-recipes' Spring
+  '24 release onwards failed to deploy with `Invalid type: DataWeaveScriptResource.<name>`,
+  even though `sf project deploy preview` showed the 14 DataWeave resources in the same
+  deploy as the Apex. The platform compiles the Apex against scripts that do not exist yet.
+  Deploying `force-app/main/default/dw` on its own first and then the tracked change set
+  succeeds, so `--pre-deploy-dir` does exactly that at every commit where the directory
+  exists. apex-recipes' own CI does not hit this because it deploys to an empty org in one
+  step.
+- **A case-only rename stops a tracked deploy for good, so `--deploy-mode source-dir` has a
+  second use.** Also found on the first live run: apex-recipes' Summer '24 release renamed
+  three platform-event fields in case only (`accountId__c` to `AccountId__c`). Salesforce
+  API names are case-insensitive, so the org has one field, but source tracking sees a
+  delete of the old path and an add of the new one, and the delete fails with "This custom
+  field is referenced elsewhere" at that commit and at every commit after it. Tracking cannot
+  progress past such a commit. The remaining commits were run with `--deploy-mode
+  source-dir`, which is exact for that range because `git diff --name-status` from the
+  rename to the head shows no deletion of any Apex class or trigger — only the three case
+  renames, a class moved between directories under the same name, and one member of a
+  documentation static-resource bundle, which a source-directory deploy rebuilds from the
+  tree anyway. Before using `source-dir` for a range, run that diff and make the same
+  argument; if a test class is deleted in the range, the mode is not exact there.
+- **`sf apex run test` can fail before enqueuing anything.** One commit's run ended with
+  "An unknown exception occurred" and the org shows no test run for it. The driver now makes
+  a second attempt before excluding a commit (`testRunAttempts`, default 2); the deploy is
+  already done, so the retry costs only the suite's time.
+- **An exclusion caused by the harness, not the commit, can be retried, and the retry is
+  visible.** `--retry-excluded` removes the exclusion records from the store, keeps a copy of
+  the store as it was under `bench/results/`, logs which commits it is re-running, and
+  executes them again. It never touches a commit that has outcomes. A commit that fails again
+  is recorded as excluded again, with the new reason.
 - **A failing test run is a completed run.** `sf apex run test` exits non-zero when any test
   fails. Treating that as a broken run would exclude exactly the commits the metric is built
   from, so the exit status is not what decides: output carrying a `tests` array is a result,
@@ -256,9 +288,14 @@ test names, outcomes, durations and redacted exclusion reasons, and nothing else
 - **Failures are re-run once, alone.** A test that fails and then passes at the same commit is
   recorded as flaky at that commit; the first run's `Fail` is kept as the observation. This
   catches a flaky failure, not a flaky pass (§7).
-- **Every first-parent commit is executed, not only those touching Apex.** The scorer defines
-  "newly failing" against the previous observation, so skipping commits would score a
-  regression against the wrong predecessor.
+- **Commits that change nothing under the source paths are skipped, and that is exact.**
+  `--only-source-changes` drops first-parent commits whose diff from their parent touches
+  nothing under the project's source paths — dependency bumps, CI, docs. Such a commit
+  deploys nothing, so the org state and every test outcome at it are those of the last
+  source-changing commit, and the scorer's "previous observation" has exactly the same
+  deployed source as `c^`. On apex-recipes this removes about three quarters of a window:
+  the 30-commit window in §8.5 spans 204 first-parent commits. Without the flag every commit
+  is executed, which is never wrong, only slower.
 
 ### 8.4 Budget
 
