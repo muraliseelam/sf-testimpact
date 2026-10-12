@@ -47,6 +47,11 @@
 
 ## 5. Ship
 
-- [ ] 5.1 `npm run check`, `npm pack --dry-run`.
-- [ ] 5.2 Push; confirm the CI workflow passes on the runners.
-- [ ] 5.3 Confirm the Release workflow's outcome and state what remains for the owner.
+- [x] 5.1 `npm run check`, `npm pack --dry-run`. Done: 793 tests, 78 files in the tarball.
+- [x] 5.2 Push; confirm the CI workflow passes on the runners. Done: run 38324482527,
+      Node 22.13 and 24, success.
+- [x] 5.3 Confirm the Release workflow's outcome and state what remains for the owner. Done:
+      run 38324482491 behaved as RELEASING.md describes — the OIDC exchange returned
+      "404 package not found" because no Trusted Publisher is configured on npmjs.com, the
+      token fallback computed the next version as 1.3.0 and failed at `npm publish` with
+      EOTP. What remains is the one npmjs.com setting, then a re-run of the Release workflow.
