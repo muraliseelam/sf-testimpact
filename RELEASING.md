@@ -5,9 +5,43 @@ to the default branch runs `.github/workflows/release.yml`, which lints, builds,
 then — only if all three pass — determines the next version from the commit messages,
 publishes to npm, tags the commit, and writes `CHANGELOG.md`.
 
-## Current state: the automated publish is broken until Trusted Publishing is switched on
+## Current state: 1.3.0 is tagged and unpublished, and only Trusted Publishing fixes the publish
 
-**What happened.** The release run for 1.2.0 on 2026-09-09
+**Where things stand on 2026-10-12.** The Release run for the live-org work
+([run 38324482491](https://github.com/muraliseelam/sf-testimpact/actions/runs/38324482491))
+computed the next version as 1.3.0, committed `chore(release): 1.3.0 [skip ci]` with the
+changelog and version bump, pushed the tag `v1.3.0` — and then failed at `npm publish` with
+`EOTP`. semantic-release prepares, commits and tags *before* it publishes, so a failed publish
+leaves all of that behind. The repository says 1.3.0; npm says 1.2.0; there is no GitHub
+release for 1.3.0.
+
+**A re-run will not fix it on its own.** semantic-release treats the newest tag as the last
+release. With `v1.3.0` present it finds no releasable commit after it and exits with "no
+release", whatever the npm setting is. Getting 1.3.0 out takes one of these, not both:
+
+1. **By hand, as 1.2.0 was shipped.** No provenance attestation, but immediate:
+
+   ```powershell
+   git fetch --tags; git checkout v1.3.0
+   npm ci; npm publish --access public      # prompts for the one-time password
+   # paste the 1.3.0 section of CHANGELOG.md into notes.md first
+   gh release create v1.3.0 --title v1.3.0 --notes-file notes.md
+   git checkout main
+   ```
+
+2. **Through the workflow, with provenance.** Configure the Trusted Publisher (next section),
+   then remove the half-made release so semantic-release can make it again:
+
+   ```powershell
+   git push origin :refs/tags/v1.3.0; git tag -d v1.3.0
+   git revert --no-edit ddb24df                 # the chore(release): 1.3.0 commit
+   git push origin main
+   ```
+
+   The Release run then recomputes 1.3.0 from the commits since `v1.2.0`, writes the
+   changelog and version bump again, tags, and publishes through OIDC.
+
+**What happened the first time.** The release run for 1.2.0 on 2026-09-09
 ([run 34411638267](https://github.com/muraliseelam/sf-testimpact/actions/runs/34411638267))
 built, tested and packed correctly, then failed at `npm publish`:
 
@@ -40,10 +74,11 @@ one setting on npmjs.com that only the package owner can make:
    - Environment: leave blank
 3. Save.
 
-The next push of a `feat:` or `fix:` commit to `main` then releases through OIDC. Until that
-setting exists, every such push produces a failed release run and an auto-filed issue
-labelled `semantic-release`, which is noise rather than damage: nothing is published and the
-next successful run releases everything accumulated since the last tag.
+Once that setting exists, a push of a `feat:` or `fix:` commit to `main` releases through
+OIDC. Until it exists, **do not push releasable commits**: every such push produces a failed
+run that still commits the version bump and pushes a tag, and that tag then blocks the next
+attempt (see the top of this file). Documentation and `chore:` commits are safe to push at
+any time; the run reports "no release" and succeeds.
 
 **Why the workflow does not need to change for the cutover.** `@semantic-release/npm` tries
 OIDC first. Today it logs `OIDC token exchange with the npm registry failed: 404 - package not
@@ -68,7 +103,8 @@ From the Conventional Commit prefixes since the last tag:
 | any commit with `!` or a `BREAKING CHANGE:` footer | major |
 | only `docs:`, `chore:`, `ci:`, `test:`, `refactor:` | **no release** |
 
-`v1.2.0` is the current tag, so the next run releases only the commits since it.
+`v1.3.0` is the current tag (unpublished — see the top of this file), so a run releases only
+the commits since it.
 
 ## Release branch
 

@@ -54,4 +54,6 @@
       run 38324482491 behaved as RELEASING.md describes — the OIDC exchange returned
       "404 package not found" because no Trusted Publisher is configured on npmjs.com, the
       token fallback computed the next version as 1.3.0 and failed at `npm publish` with
-      EOTP. What remains is the one npmjs.com setting, then a re-run of the Release workflow.
+      EOTP — after semantic-release had already pushed the `chore(release): 1.3.0` commit
+      and the `v1.3.0` tag. What remains is the npmjs.com setting and one of the two recovery
+      paths at the top of RELEASING.md; a plain re-run finds nothing to release.
