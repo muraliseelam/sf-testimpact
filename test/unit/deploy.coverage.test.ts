@@ -193,10 +193,56 @@ describe('tooling client', () => {
     expect(String(query.mock.calls[0]?.[0])).toContain("O\\'Brien");
   });
 
-  it('lists org test classes', async () => {
-    const query = vi.fn().mockResolvedValue({ records: [{ Name: 'AlphaTest' }, { notName: 1 }] });
+  it('lists org test classes by inspecting bodies, never by filtering on Body in SOQL', async () => {
+    // The first live run of --verify-coverage failed with "field 'Body' can not be filtered in
+    // a query call": the Tooling API returns Body but refuses it in a WHERE clause.
+    const query = vi.fn().mockResolvedValue({
+      records: [
+        { Name: 'AlphaTest', Body: '@IsTest\nprivate class AlphaTest {}' },
+        { Name: 'Legacy_Tests', Body: 'public class Legacy_Tests {\n  static testMethod void t() {}\n}' },
+        { Name: 'Service', Body: 'public class Service { /* not a test */ }' },
+        // apex-recipes' ConnectApiWrapper: a doc comment mentions the annotation. Not a test,
+        // and the first live run flagged it as an org-only one.
+        { Name: 'ConnectApiWrapper', Body: '/**\n * fails unless used in test methods marked `@isTest(SeeAllData=true)`.\n */\npublic class ConnectApiWrapper {}' },
+        { Name: 'NoBody' },
+        { notName: 1 },
+      ],
+      done: true,
+    });
     const names = await createToolingCoverageClient({ tooling: { query } }).orgTestClasses();
-    expect(names).toEqual(['AlphaTest']);
+    expect(names).toEqual(['AlphaTest', 'Legacy_Tests']);
+    const soql = String(query.mock.calls[0]?.[0]);
+    expect(soql).toContain('Body');
+    expect(soql).not.toMatch(/WHERE[^]*Body/i);
+    expect(soql).toContain("ManageableState = 'unmanaged'");
+  });
+
+  it('follows every page of the class list', async () => {
+    // Stopping at the first page would under-report org-only tests, the one direction this
+    // drift check must not err in.
+    const query = vi.fn().mockResolvedValue({
+      records: [{ Name: 'PageOneTest', Body: '@isTest class PageOneTest {}' }],
+      done: false,
+      nextRecordsUrl: '/services/data/v62.0/tooling/query/01gxx-2000',
+    });
+    const queryMore = vi.fn().mockResolvedValue({
+      records: [{ Name: 'PageTwoTest', Body: '@IsTest class PageTwoTest {}' }],
+      done: true,
+    });
+    const names = await createToolingCoverageClient({ tooling: { query, queryMore } }).orgTestClasses();
+    expect(names).toEqual(['PageOneTest', 'PageTwoTest']);
+    expect(queryMore).toHaveBeenCalledWith('/services/data/v62.0/tooling/query/01gxx-2000');
+  });
+
+  it('refuses to return a truncated list when the next page cannot be fetched', async () => {
+    const query = vi.fn().mockResolvedValue({
+      records: [{ Name: 'OnlyTest', Body: '@IsTest class OnlyTest {}' }],
+      done: false,
+      nextRecordsUrl: '/more',
+    });
+    await expect(createToolingCoverageClient({ tooling: { query } }).orgTestClasses()).rejects.toThrow(
+      /incomplete/,
+    );
   });
 });
 

@@ -6,6 +6,7 @@ import { analyze } from '../../query/analyze.js';
 import { gitChangedFiles } from '../../query/changeSet.js';
 import { allTestClasses } from '../../query/selection.js';
 import { buildDeployPlan } from '../../deploy/plan.js';
+import { argsForSpawn } from '../../deploy/shell.js';
 import {
   COVERAGE_FLOOR_PERCENT,
   findCoverageRegressions,
@@ -33,15 +34,21 @@ export default class TestImpactDeploy extends SfCommand<DeployResult> {
     'reaches a changed class, not a minimal subset, so each class is covered exactly as it ' +
     'would be under RunLocalTests. That argument assumes the graph knows every caller, which ' +
     'is false when the org holds Apex the repository does not — use --verify-coverage to ' +
-    'check that against a real org.';
+    'check that against a real org.\n\n' +
+    'Flags for `sf project deploy start` itself (--source-dir, --ignore-conflicts, --wait, ...) ' +
+    'go after a `--` separator and are passed through unchanged.';
 
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> --base main',
     '<%= config.bin %> <%= command.id %> --base main --verify-coverage --target-org prod',
+    '<%= config.bin %> <%= command.id %> --base main --target-org prod -- --source-dir force-app --ignore-conflicts',
   ];
 
   public static override readonly enableJsonFlag = true;
-  public static override readonly strict = false; // Unrecognised flags pass through to the deploy.
+  // Everything after `--` is passed through to `sf project deploy start`. `strict = false`
+  // lets oclif accept those extra arguments; it does NOT make oclif accept flags it has not
+  // declared, which is why the separator is required.
+  public static override readonly strict = false;
 
   public static override readonly flags = {
     base: Flags.string({ summary: 'Base git ref to compare from.', required: true }),
@@ -89,7 +96,12 @@ export default class TestImpactDeploy extends SfCommand<DeployResult> {
     const changed = gitChangedFiles(gitRunner(root), flags.base, flags.head);
     const result = analyze(graph, changed, config);
 
-    const passthrough = argv.filter((a): a is string => typeof a === 'string' && a.startsWith('-'));
+    // Everything after `--` reaches `sf project deploy start` untouched, in order. oclif
+    // rejects a flag it does not declare ("Nonexistent flag: --source-dir") whatever
+    // `strict` says, so the separator is the only way to hand flags through, and the earlier
+    // filter here kept only tokens starting with `-`, which turned `--source-dir force-app`
+    // into a bare `--source-dir`. Both were found on the first deploy against a real org.
+    const passthrough = argv.filter((a): a is string => typeof a === 'string');
     const plan = buildDeployPlan(result, config, [
       ...(flags['target-org'] === undefined ? [] : ['--target-org', flags['target-org']]),
       ...passthrough,
@@ -131,10 +143,14 @@ export default class TestImpactDeploy extends SfCommand<DeployResult> {
       return { testLevel: plan.testLevel, tests: plan.tests, deployed: false, blockers };
     }
 
-    const child = spawnSync('sf', ['project', 'deploy', 'start', ...plan.args], {
+    // On Windows `sf` is `sf.cmd`, which only starts through a shell, and a shell joins the
+    // arguments with spaces. Every argument is quoted for it where needed: unquoted, a
+    // class under `Collection Recipes/` reached the deploy as two paths and neither existed.
+    const useShell = process.platform === 'win32';
+    const child = spawnSync('sf', argsForSpawn(['project', 'deploy', 'start', ...plan.args], useShell), {
       cwd: root,
       stdio: 'inherit',
-      shell: process.platform === 'win32',
+      shell: useShell,
     });
     if (child.status !== 0) process.exitCode = child.status ?? 1;
 
