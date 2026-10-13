@@ -46,9 +46,12 @@ differ from the restored copy, and the result is identical to a fresh build.
   change misses the cache and indexes from scratch.
 
 If a restored index was written by a different build, `index` notices and re-parses every
-file. Since 1.3.1 a stale cache costs time, never correctness. A cold first index takes
-seconds on a few hundred classes, and about 20 seconds to over a minute on a project the size
-of NPSP, about a thousand classes ([benchmarks](benchmarks.md#index-and-query-cost)).
+file, so a stale cache costs one full parse. Before 1.3.1, `index` reused the stale facts, and
+every analysis fell back to the full suite until someone ran `index --force`.
+
+A cold first index takes seconds on a few hundred classes, and about 20 seconds to over a
+minute on a project the size of NPSP, about a thousand classes
+([benchmarks](benchmarks.md#index-and-query-cost)).
 
 ## Analyse, and decide what to do with the answer
 

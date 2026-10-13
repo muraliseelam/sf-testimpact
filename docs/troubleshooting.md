@@ -48,8 +48,7 @@ branch name: a remote branch is `origin/main`, not `main`, unless you have a loc
 Look at the `FALLBACK` lines; each names its rule. The usual one is
 `entry-point-policy-full`, the conservative default. On the live apex-recipes window the
 default ran everything on 25 of 30 commits, and `widen` on 11. If the output also says what
-`entryPointPolicy: widen` would select, that number is
-from your own code. [Getting started](getting-started.md#5-choose-an-entry-point-policy)
+`entryPointPolicy: widen` would select, that number is from your own code. [Getting started](getting-started.md#5-choose-an-entry-point-policy)
 explains how to decide. The other common ones are unmodelled file types such as LWC and
 layouts. [Rules](rules.md) covers each one and what to do.
 
@@ -140,7 +139,7 @@ not hold for that org. Either bring those tests into the repository, or deploy t
 
 ### A path with a space in it fails on Windows
 
-Upgrade to 1.3.1. Earlier versions handed arguments to `sf` through a Windows shell without
+Upgrade. Versions before 1.3.0 handed arguments to `sf` through a Windows shell without
 quoting, so `classes/Collection Recipes/X.cls` arrived as two paths.
 
 ## FAQ
