@@ -86,9 +86,43 @@ describe('analyze --json shape', () => {
     const withDecisions = jsonFor([{ path: `${CLASS_DIR}/New.cls`, kind: 'added' }]);
     expect(withDecisions.decisions.length).toBeGreaterThan(0);
     for (const decision of withDecisions.decisions) {
-      expect(Object.keys(decision).sort()).toEqual(['hint', 'level', 'message', 'rule', 'subject']);
+      expect(Object.keys(decision).sort()).toEqual(['hint', 'level', 'message', 'rule', 'subject', 'subjects']);
       expect(decision.hint === null || typeof decision.hint === 'string').toBe(true);
     }
+  });
+});
+
+describe('analyze --json carries every subject a rule fired on', () => {
+  // Two impacted entry points, plus an unmodelled file so the counterfactual is withheld:
+  // exactly the case where the human output said "full list in --json" and the list was
+  // nowhere in the JSON.
+  const entry = graphOf([
+    cls('Core', 'public class Core { public static Integer v() { return 1; } }'),
+    cls(
+      'RestA',
+      "@RestResource(urlMapping='/a') global class RestA { @HttpGet global static Integer doGet() { return Core.v(); } }",
+    ),
+    cls('AuraB', 'public class AuraB { @AuraEnabled public static Integer fetch() { return Core.v(); } }'),
+    cls('CoreTest', '@IsTest private class CoreTest { @IsTest static void t() { Core.v(); } }'),
+  ]);
+  const changed = [
+    { path: `${CLASS_DIR}/Core.cls`, kind: 'modified' as const },
+    { path: 'force-app/main/default/layouts/Account-Account Layout.layout-meta.xml', kind: 'modified' as const },
+  ];
+  const result = analyze(entry.graph, changed, configWith());
+  const json = toAnalyzeJson({ result, graph: entry.graph, base: 'a', head: 'b', changedFiles: 2 });
+
+  it('lists every impacted entry point on the entry-point decision', () => {
+    const decision = json.decisions.find((d) => d.rule === 'entry-point-policy-full');
+    expect([...(decision?.subjects ?? [])].sort()).toEqual(['AuraB', 'RestA']);
+    // The counterfactual is the only other place the names could appear, and it is
+    // withheld here because the unmodelled file forces a full run whatever the policy.
+    expect(json.counterfactual).toBeNull();
+  });
+
+  it('gives a single-subject rule a one-element list', () => {
+    const decision = json.decisions.find((d) => d.rule === 'unmodelled-file-type');
+    expect(decision?.subjects).toEqual([decision?.subject]);
   });
 });
 

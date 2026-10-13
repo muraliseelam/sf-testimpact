@@ -21,7 +21,16 @@ export interface AnalyzeJsonTest {
 export interface AnalyzeJsonDecision {
   readonly level: 'fallback' | 'widen' | 'info';
   readonly rule: string;
+  /** The first file or node the rule fired on. */
   readonly subject: string;
+  /**
+   * Every file or node the rule fired on; `[subject]` when there is only one.
+   *
+   * Always present. The human output caps long lists and says "full list in `--json`", and
+   * until this field existed that was true only when the counterfactual happened to carry
+   * the same names. Added within schema version 1.
+   */
+  readonly subjects: readonly string[];
   readonly message: string;
   readonly hint: string | null;
 }
@@ -90,6 +99,7 @@ export function toAnalyzeJson(input: AnalyzeJsonInput): AnalyzeJson {
       level: d.level,
       rule: d.rule,
       subject: d.subject,
+      subjects: d.subjects === undefined ? [d.subject] : [...d.subjects],
       message: d.message,
       hint: d.hint ?? null,
     })),
