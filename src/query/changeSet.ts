@@ -29,11 +29,20 @@ export type GitRunner = (args: readonly string[]) => string;
  * old path plus an add of the new one: the old path's nodes have to be seeded as changed or
  * everything that depended on them is missed, and the new path's nodes are genuinely new.
  * `--name-only` reports only the destination and would silently drop the first half.
+ *
+ * `--relative`, because git reports paths from the top of the repository while the index
+ * stores them from the project root, which is where `run` executes. When the sfdx project
+ * sits in a subdirectory of its repository, as in a monorepo, every changed path carried a
+ * prefix the index had never seen, was taken for a file outside the source paths, and was
+ * ignored without a word: a change to a class selected none of its tests. `--relative`
+ * reports paths from the working directory and leaves out changes outside it, which are
+ * outside the project and cannot be deployed by it. In a project at the repository root it
+ * changes nothing.
  */
 export function gitChangedFiles(run: GitRunner, base: string, head = 'HEAD'): ChangedFile[] {
   let output: string;
   try {
-    output = run(['diff', '--name-status', '--find-renames', `${base}...${head}`]);
+    output = run(['diff', '--name-status', '--find-renames', '--relative', `${base}...${head}`]);
   } catch (cause) {
     throw new TestImpactError('GIT_FAILED', `Could not diff ${base}...${head}.`, {
       subject: `${base}...${head}`,

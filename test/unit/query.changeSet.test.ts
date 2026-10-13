@@ -51,6 +51,20 @@ describe('gitChangedFiles', () => {
     expect(seen[0]).toContain('--find-renames');
   });
 
+  it('asks for paths relative to the project root, not the repository root', () => {
+    // Without --relative, a project in a subdirectory of its repository saw every changed
+    // path with a prefix the index did not know, took it for a file outside the source
+    // paths, and ignored it silently: a change to a class selected none of its tests.
+    const seen: string[][] = [];
+    gitChangedFiles((args) => {
+      seen.push([...args]);
+      return '';
+    }, 'main');
+    expect(seen[0]).toContain('--relative');
+    // The range stays the last argument: after it, git would read --relative as a path.
+    expect(seen[0]?.[seen[0].length - 1]).toBe('main...HEAD');
+  });
+
   it('ignores blank lines', () => {
     expect(gitChangedFiles(() => '\nM\ta.cls\n\n', 'main')).toHaveLength(1);
   });
