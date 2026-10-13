@@ -14,6 +14,38 @@ export interface DeployPlan {
   readonly rationale: string;
 }
 
+export interface Passthrough {
+  /** Everything after the first `--`, verbatim and in order, for `sf project deploy start`. */
+  readonly passthrough: readonly string[];
+  /** Positional arguments that came before `--`. `deploy` takes none, so each is a mistake. */
+  readonly unexpected: readonly string[];
+}
+
+/**
+ * Split the command line into what goes to `sf project deploy start` and what is left over.
+ *
+ * The passthrough is read from the raw command line, not from oclif's parsed `argv`. oclif
+ * sorts `argv` by where each token FIRST appears on the command line, so a flag given twice
+ * (`-- --source-dir A --source-dir B`) came out as `--source-dir --source-dir A B`, and a
+ * token that also appears before the separator, such as `--dry-run` or a branch name, moved
+ * to the front.
+ *
+ * `parsedArgs` is oclif's `argv`, which holds every positional argument, before and after
+ * the separator. Whatever it holds beyond the passthrough came before `--`.
+ */
+export function passthroughArgs(rawArgv: readonly string[], parsedArgs: readonly string[]): Passthrough {
+  const separator = rawArgv.indexOf('--');
+  const passthrough = separator < 0 ? [] : rawArgv.slice(separator + 1);
+  const remaining = [...passthrough];
+  const unexpected: string[] = [];
+  for (const arg of parsedArgs) {
+    const at = remaining.indexOf(arg);
+    if (at < 0) unexpected.push(arg);
+    else remaining.splice(at, 1);
+  }
+  return { passthrough, unexpected };
+}
+
 /**
  * Build the deploy arguments.
  *

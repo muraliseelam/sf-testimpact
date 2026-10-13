@@ -5,7 +5,7 @@ import { TestImpactError } from '../../errors.js';
 import { analyze } from '../../query/analyze.js';
 import { gitChangedFiles } from '../../query/changeSet.js';
 import { allTestClasses } from '../../query/selection.js';
-import { buildDeployPlan } from '../../deploy/plan.js';
+import { buildDeployPlan, passthroughArgs } from '../../deploy/plan.js';
 import { argsForSpawn } from '../../deploy/shell.js';
 import {
   COVERAGE_FLOOR_PERCENT,
@@ -77,6 +77,25 @@ export default class TestImpactDeploy extends SfCommand<DeployResult> {
     const { flags, argv } = await this.parse(TestImpactDeploy);
     const root = flags['root-dir'];
 
+    // Everything after `--` reaches `sf project deploy start` untouched, in order. oclif
+    // rejects a flag it does not declare ("Nonexistent flag: --source-dir") whatever
+    // `strict` says, so the separator is the only way to hand flags through. 1.3.0 passed
+    // oclif's `argv`, which oclif sorts by each token's first position on the command line:
+    // a repeated `--source-dir` lost its pairing with its values. `passthroughArgs` reads the
+    // raw command line instead.
+    const { passthrough, unexpected } = passthroughArgs(
+      this.argv,
+      argv.filter((a): a is string => typeof a === 'string'),
+    );
+    if (unexpected.length > 0) {
+      throw new TestImpactError('CONFIG_INVALID', `Unexpected argument: ${unexpected.join(' ')}`, {
+        subject: unexpected.join(' '),
+        remedy:
+          '`deploy` takes no arguments. Flags for `sf project deploy start`, and their values, ' +
+          'go after `--`, for example `-- --manifest delta/package/package.xml`.',
+      });
+    }
+
     const fs = createNodeFileSystem(root);
     const graph = loadGraph(fs, root);
     if (graph === null) {
@@ -101,12 +120,6 @@ export default class TestImpactDeploy extends SfCommand<DeployResult> {
     const changed = gitChangedFiles(gitRunner(root), flags.base, flags.head);
     const result = analyze(graph, changed, config);
 
-    // Everything after `--` reaches `sf project deploy start` untouched, in order. oclif
-    // rejects a flag it does not declare ("Nonexistent flag: --source-dir") whatever
-    // `strict` says, so the separator is the only way to hand flags through, and the earlier
-    // filter here kept only tokens starting with `-`, which turned `--source-dir force-app`
-    // into a bare `--source-dir`. Both were found on the first deploy against a real org.
-    const passthrough = argv.filter((a): a is string => typeof a === 'string');
     const plan = buildDeployPlan(result, config, [
       ...(flags['target-org'] === undefined ? [] : ['--target-org', flags['target-org']]),
       ...passthrough,

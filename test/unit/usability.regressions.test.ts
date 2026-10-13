@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { buildDeployPlan } from '../../src/deploy/plan.js';
+import { buildDeployPlan, passthroughArgs } from '../../src/deploy/plan.js';
 import { staticResourceOwnerOf } from '../../src/extract/staticresource.js';
 import { componentPathFor } from '../../src/query/changeSet.js';
 import { TestImpactError, ConfigError, ExtractorError } from '../../src/errors.js';
@@ -76,6 +76,71 @@ describe('deploy passes --tests in the form sf project deploy start accepts', ()
       '--wait',
       '30',
     ]);
+  });
+});
+
+describe('deploy hands everything after -- to sf project deploy start, verbatim and in order', () => {
+  // FOUND BY: capturing the documentation's examples against 1.3.0. oclif sorts its parsed
+  // argv by each token's first position on the command line, so the passthrough
+  // `-- --source-dir A.cls --source-dir B.cls` reached sf as `--source-dir --source-dir A.cls
+  // B.cls`, and `--dry-run` after `--` jumped ahead of `--manifest` because deploy's own
+  // `--dry-run` came earlier. Each `oclifArgv` below is what oclif produced for that line.
+  const commandLine = (...after: string[]) => [
+    '--base',
+    'main',
+    '--target-org',
+    'dev',
+    '--dry-run',
+    '--',
+    ...after,
+  ];
+
+  it('keeps a repeated flag paired with its values', () => {
+    const after = ['--source-dir', 'A.cls', '--source-dir', 'B.cls'];
+    const oclifArgv = ['--source-dir', '--source-dir', 'A.cls', 'B.cls'];
+    expect(passthroughArgs(commandLine(...after), oclifArgv)).toEqual({
+      passthrough: after,
+      unexpected: [],
+    });
+  });
+
+  it('keeps a token that also appears before the separator where it was written', () => {
+    const after = ['--manifest', 'delta/package/package.xml', '--dry-run', '--wait', '60'];
+    const oclifArgv = ['--dry-run', '--manifest', 'delta/package/package.xml', '--wait', '60'];
+    expect(passthroughArgs(commandLine(...after), oclifArgv)).toEqual({
+      passthrough: after,
+      unexpected: [],
+    });
+  });
+
+  it('passes nothing when there is no separator', () => {
+    expect(passthroughArgs(['--base', 'main'], [])).toEqual({ passthrough: [], unexpected: [] });
+  });
+
+  it('passes a second -- through like any other argument', () => {
+    const raw = ['--base', 'main', '--', 'a', '--', 'b'];
+    expect(passthroughArgs(raw, ['a', '--', 'b'])).toEqual({
+      passthrough: ['a', '--', 'b'],
+      unexpected: [],
+    });
+  });
+
+  it('reports a positional argument before the separator instead of forwarding it', () => {
+    const raw = ['--base', 'main', 'force-app', '--', '--wait', '60'];
+    expect(passthroughArgs(raw, ['force-app', '--wait', '60'])).toEqual({
+      passthrough: ['--wait', '60'],
+      unexpected: ['force-app'],
+    });
+    expect(passthroughArgs(['--base', 'main', 'force-app'], ['force-app'])).toEqual({
+      passthrough: [],
+      unexpected: ['force-app'],
+    });
+  });
+
+  it('counts a stray argument that repeats a passthrough token', () => {
+    // `60` appears twice in oclif's argv but only once after the separator.
+    const raw = ['--base', 'main', '60', '--', '--wait', '60'];
+    expect(passthroughArgs(raw, ['60', '60', '--wait']).unexpected).toEqual(['60']);
   });
 });
 
