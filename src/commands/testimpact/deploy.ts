@@ -41,7 +41,10 @@ export default class TestImpactDeploy extends SfCommand<DeployResult> {
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> --base main',
     '<%= config.bin %> <%= command.id %> --base main --verify-coverage --target-org prod',
-    '<%= config.bin %> <%= command.id %> --base main --target-org prod -- --source-dir force-app --ignore-conflicts',
+    // A delta manifest, not `--source-dir force-app`: under RunSpecifiedTests every class in
+    // the payload needs 75% from the tests that run, and a whole-directory payload carries
+    // every unchanged class too. Live testing showed that fail (docs/USER-TESTING.md, D5).
+    '<%= config.bin %> <%= command.id %> --base main --target-org prod -- --manifest delta/package/package.xml --wait 60',
   ];
 
   public static override readonly enableJsonFlag = true;
@@ -58,7 +61,9 @@ export default class TestImpactDeploy extends SfCommand<DeployResult> {
       summary: 'Check per-class coverage against the target org before deploying.',
       description:
         'Queries ApexCodeCoverageAggregate via the Tooling API and refuses to deploy if any ' +
-        'class in the payload sits under 75%. This is the only flag that contacts an org.',
+        'changed class sits under 75% in the org, and warns about test classes the org has ' +
+        'that this repository does not. This is the only part of the command that queries the ' +
+        'org itself; the deploy is run by `sf project deploy start`.',
       default: false,
     }),
     'target-org': Flags.string({ summary: 'Target org username or alias.', char: 'o' }),
@@ -131,7 +136,10 @@ export default class TestImpactDeploy extends SfCommand<DeployResult> {
     if (flags['verify-coverage']) {
       blockers.push(...(await this.checkOrgCoverage(graph, result, flags['target-org'])));
       if (blockers.length > 0) {
-        throw new TestImpactError('GRAPH_STALE', 'Deployment would fail on Apex code coverage.', {
+        // COVERAGE_BLOCKED, not GRAPH_STALE as before: nothing about the index is stale, and a
+        // CI script keying on the code would have been told to re-index. Safe to change:
+        // --verify-coverage could not reach this line before 1.3.0 (its org query failed).
+        throw new TestImpactError('COVERAGE_BLOCKED', 'Deployment would fail on Apex code coverage.', {
           subject: flags['target-org'] ?? 'target org',
           remedy: `Add tests for: ${blockers.join(', ')}`,
         });

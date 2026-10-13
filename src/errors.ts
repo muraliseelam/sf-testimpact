@@ -13,7 +13,9 @@ export type ErrorCode =
   | 'EXTRACTOR_FAILED'
   | 'GRAPH_STALE'
   | 'GRAPH_CORRUPT'
-  | 'GIT_FAILED';
+  | 'GIT_FAILED'
+  /** `deploy --verify-coverage` found payload classes the deploy would fail on. */
+  | 'COVERAGE_BLOCKED';
 
 export class TestImpactError extends Error {
   readonly code: ErrorCode;
