@@ -169,6 +169,44 @@ describe('taint.dynamicApex and taint.dynamicSoql: full', () => {
   });
 });
 
+describe('telling "the index is behind" from "a type we do not model"', () => {
+  // The classification used to come from a hand-kept extension list that had drifted from
+  // the extractors in both directions.
+  const unmodelled = (path: string) => {
+    const result = analyze(BASIC.graph, [{ path, kind: 'added' }], configWith());
+    return result.decisions.find((d) => d.level === 'fallback')?.rule;
+  };
+
+  it.each([
+    'force-app/main/default/lwc/widget/widget.js',
+    'force-app/main/default/lwc/widget/widget.html',
+  ])('reports an LWC file (%s) as an unmodelled type, not as missing from the index', (path) => {
+    // "Re-run sf testimpact index" can never help: LWC is not modelled since its extractor
+    // was deleted.
+    expect(unmodelled(path)).toBe('unmodelled-file-type');
+  });
+
+  it.each([
+    'force-app/main/default/profiles/Admin.profile-meta.xml',
+    'force-app/main/default/objects/Account/validationRules/Rule.validationRule-meta.xml',
+    'force-app/main/default/staticresources/Seed.resource-meta.xml',
+    'force-app/main/default/permissionsetgroups/Ops.permissionsetgroup-meta.xml',
+    'force-app/main/default/classes/BrandNew.cls-meta.xml',
+  ])('reports a modelled file the index has not seen (%s) as missing from the index', (path) => {
+    expect(unmodelled(path)).toBe('changed-file-not-in-index');
+  });
+
+  it('still falls back for a modelled file missing from the index under unmodelledFileType: widen', () => {
+    // The dangerous direction of the old drift: a new validation rule, misread as an
+    // unmodelled type, was let through without analysis when this setting was `widen`.
+    const config = configWith({ taint: { ...configWith().taint, unmodelledFileType: 'widen' } });
+    const path = 'force-app/main/default/objects/Account/validationRules/Rule.validationRule-meta.xml';
+    const result = analyze(BASIC.graph, [{ path, kind: 'added' }], config);
+    expect(result.outcome).toBe('full');
+    expect(ruleFired(result.decisions, 'changed-file-not-in-index').subject).toBe(path);
+  });
+});
+
 describe('Level 3 fallback — a changed file is not in the index', () => {
   it('falls back and names the file and the rule', () => {
     const path = `${CLASS_DIR}/BrandNew.cls`;

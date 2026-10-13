@@ -12,7 +12,8 @@ import { PARSE_FAILURE_CAUSE } from '../extract/apex.js';
 import { checkStaleness } from '../graph/store.js';
 import { type ImpactGraph } from '../graph/model.js';
 import { NodeFlags, hasFlag, type EntryPointKind, type NodeKey, type TaintDomain } from '../types.js';
-import { type ChangeSet } from './changeSet.js';
+import { isModelledPath } from '../extract/index.js';
+import { componentPathFor, type ChangeSet } from './changeSet.js';
 
 export type DecisionLevel = 'fallback' | 'widen' | 'info';
 
@@ -36,8 +37,23 @@ export interface Decision {
   readonly subjects?: readonly string[];
 }
 
-/** Recognised extensions: anything else is metadata we do not model. */
-const MODELLED_EXTENSIONS = /\.(cls|trigger|object-meta\.xml|field-meta\.xml|flow-meta\.xml|permissionset-meta\.xml|labels-meta\.xml|customPermission-meta\.xml|translation-meta\.xml|js|html)$/i;
+/**
+ * Whether a path is something the index models: a file an extractor handles, or a member of
+ * one (a `-meta.xml` companion, a static-resource payload).
+ *
+ * This decides between two different answers for a changed path that is not in the index:
+ * "the index is behind" (re-index) and "a type we do not model" (nothing to re-index). It
+ * used to be a hand-kept list of extensions that had drifted from the extractors in both
+ * directions: it still listed LWC's `.js` and `.html` after the LWC extractor was deleted,
+ * so an LWC change was reported as "not in the index — re-run index", which could never
+ * help; and it omitted profiles, validation rules, static resources, permission-set groups
+ * and object translations, so a newly added one was reported as an unmodelled type — and
+ * silently let through under `taint.unmodelledFileType: widen`. Deriving it from the
+ * extractor dispatch keeps the two in step by construction.
+ */
+function isIndexable(path: string): boolean {
+  return isModelledPath(path) || componentPathFor(path) !== null;
+}
 
 /**
  * Reasons the whole run must degrade to the configured full test level.
@@ -102,7 +118,7 @@ export function checkFallbacks(
         break;
 
       case 'not-in-index':
-        if (MODELLED_EXTENSIONS.test(file.path)) {
+        if (isIndexable(file.path)) {
           decisions.push({
             level: 'fallback',
             rule: 'changed-file-not-in-index',
