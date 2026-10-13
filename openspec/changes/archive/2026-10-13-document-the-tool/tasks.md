@@ -55,5 +55,8 @@ Found while writing the pages and capturing their output, and fixed the same way
 - [x] 4.1 Every command output quoted in the new pages is from a real run, retained in
       `docs/measurements/`: `docs-sample-project.txt`, `quickstart-apex-recipes-1.3.1.txt`
       and `fixes-1.3.1-before-after.txt`, with the scripts that produced them.
-- [ ] 4.2 `npm run check`; CI green.
-- [ ] 4.3 Release (the fixes are `fix:` commits) and confirm npm shows the new README.
+- [x] 4.2 `npm run check`; CI green. 827 tests; CI run 38344202638 passed on Node 22.13 and
+      24, including the new command-reference check.
+- [x] 4.3 Release (the fixes are `fix:` commits) and confirm npm shows the new README.
+      Release run 38344202651 published 1.3.1 through Trusted Publishing, with provenance;
+      npmjs.com shows the landing-page README, its relative links resolved to GitHub.
