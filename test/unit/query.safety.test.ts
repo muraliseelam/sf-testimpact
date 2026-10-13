@@ -253,7 +253,10 @@ describe('Level 3 fallback — a stale index (DESIGN.md 7.3)', () => {
     const decision = ruleFired(result.decisions, 'graph-stale-format-version');
     expect(decision.message).toContain('99');
     expect(decision.message).toContain('version 1');
-    expect(decision.hint).toContain('index --force');
+    // Plain `index` rebuilds a stale index on its own, so the hint no longer sends people to
+    // --force.
+    expect(decision.hint).toContain('sf testimpact index');
+    expect(decision.hint).not.toContain('--force');
   });
 
   it('falls back on an apex-parser major-version change, naming both versions', () => {

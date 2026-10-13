@@ -100,7 +100,10 @@ export function checkStaleness(
   graph: Pick<ImpactGraph, 'generator' | 'files'>,
   expected: GraphGenerator = currentGenerator(),
 ): StalenessReason | null {
-  const reindex = 'Run `sf testimpact index --force`.';
+  // Plain `index` is enough: it detects a stale stored index with this same check and
+  // re-parses every file. `--force` is no longer needed, and saying so sent people to a flag
+  // whose only remaining purpose is distrust of an index that is not stale.
+  const reindex = 'Run `sf testimpact index`; it re-parses every file when the index came from a different build.';
 
   if (graph.generator.formatVersion !== expected.formatVersion) {
     return {
