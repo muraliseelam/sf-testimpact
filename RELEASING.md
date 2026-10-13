@@ -5,41 +5,47 @@ to the default branch runs `.github/workflows/release.yml`, which lints, builds,
 then — only if all three pass — determines the next version from the commit messages,
 publishes to npm, tags the commit, and writes `CHANGELOG.md`.
 
-## Current state: 1.3.0 is tagged and unpublished, and only Trusted Publishing fixes the publish
+## Current state: 1.3.0 is ready and waits on one npmjs.com setting
 
-**Where things stand on 2026-10-12.** The Release run for the live-org work
-([run 38324482491](https://github.com/muraliseelam/sf-testimpact/actions/runs/38324482491))
-computed the next version as 1.3.0, committed `chore(release): 1.3.0 [skip ci]` with the
-changelog and version bump, pushed the tag `v1.3.0` — and then failed at `npm publish` with
-`EOTP`. semantic-release prepares, commits and tags *before* it publishes, so a failed publish
-leaves all of that behind. The repository says 1.3.0; npm says 1.2.0; there is no GitHub
-release for 1.3.0.
+**Where things stand on 2026-10-13.** Every commit for 1.3.0 is on `main`. npm is at 1.2.0.
+The workflow now refuses to start a release unless npm accepts this repository's OIDC token
+(the "Verify the npm Trusted Publishing exchange" step), and that exchange currently answers
+`404 OIDC token exchange error - package not found`: **npm has no Trusted Publisher entry
+matching this workflow.** Linking a GitHub account to the npm account is not that entry.
 
-**A re-run will not fix it on its own.** semantic-release treats the newest tag as the last
-release. With `v1.3.0` present it finds no releasable commit after it and exits with "no
-release", whatever the npm setting is. Getting 1.3.0 out takes one of these, not both:
+**The one thing to do.** On npmjs.com, open the `sf-testimpact` package → **Settings** →
+**Trusted Publisher** → **GitHub Actions**, and enter exactly what the token carries:
 
-1. **By hand, as 1.2.0 was shipped.** No provenance attestation, but immediate:
+| Field | Value |
+| --- | --- |
+| Organization or user | `muraliseelam` |
+| Repository | `sf-testimpact` |
+| Workflow filename | `release.yml` |
+| Environment | leave blank |
 
-   ```powershell
-   git fetch --tags; git checkout v1.3.0
-   npm ci; npm publish --access public      # prompts for the one-time password
-   # paste the 1.3.0 section of CHANGELOG.md into notes.md first
-   gh release create v1.3.0 --title v1.3.0 --notes-file notes.md
-   git checkout main
-   ```
+Those four values are printed by the verify step on every run as `repository_owner`,
+`repository`, `workflow_ref` and `environment`, so a mismatch can be read off the log.
 
-2. **Through the workflow, with provenance.** Configure the Trusted Publisher (next section),
-   then remove the half-made release so semantic-release can make it again:
+**Then check without releasing.** Run the Release workflow by hand with the `oidc_check`
+box ticked (Actions → Release → Run workflow), or:
 
-   ```powershell
-   git push origin :refs/tags/v1.3.0; git tag -d v1.3.0
-   git revert --no-edit ddb24df                 # the chore(release): 1.3.0 commit
-   git push origin main
-   ```
+```powershell
+gh workflow run Release -f oidc_check=true
+```
 
-   The Release run then recomputes 1.3.0 from the commits since `v1.2.0`, writes the
-   changelog and version bump again, tags, and publishes through OIDC.
+The log ends with either `npm exchange: HTTP 200` and "Trusted Publishing works", or the
+404 and the field list above. Nothing is released by a check run.
+
+**Then release.** Run the workflow again without the box (or `gh workflow run Release`).
+It recomputes 1.3.0 from the commits since `v1.2.0`, writes the changelog and version bump,
+tags, publishes through OIDC with a provenance attestation, and creates the GitHub release.
+
+**Why the guard exists.** semantic-release commits the version bump and pushes the tag
+*before* it publishes, so a publish failure leaves a tagged, unpublished release behind, and
+the newest tag is what it treats as the last release: the next run then finds nothing to do.
+That happened to 1.2.0 on 2026-09-09 and twice to 1.3.0 on 2026-10-12, each time undone by
+deleting the tag and reverting the release commit. With the exchange verified first, a
+misconfiguration fails the job before anything is written.
 
 **What happened the first time.** The release run for 1.2.0 on 2026-09-09
 ([run 34411638267](https://github.com/muraliseelam/sf-testimpact/actions/runs/34411638267))
@@ -63,34 +69,13 @@ carries no provenance attestation, because it was not published from the workflo
 
 **What fixes it.** npm Trusted Publishing: GitHub mints a short-lived OIDC token for the
 workflow run, npm verifies it came from this repository and this workflow, and no long-lived
-secret is involved. The workflow side has been ready since before 1.2.0; the remaining step is
-one setting on npmjs.com that only the package owner can make:
+secret is involved. The workflow no longer reads `NPM_TOKEN` at all — the token could not
+publish anyway — so the secret can be deleted whenever convenient.
 
-1. Open the `sf-testimpact` package on npmjs.com → **Settings** → **Trusted Publisher**.
-2. Choose **GitHub Actions** and enter:
-   - Organization or user: `muraliseelam`
-   - Repository: `sf-testimpact`
-   - Workflow filename: `release.yml`
-   - Environment: leave blank
-3. Save.
-
-Once that setting exists, a push of a `feat:` or `fix:` commit to `main` releases through
-OIDC. Until it exists, **do not push releasable commits**: every such push produces a failed
-run that still commits the version bump and pushes a tag, and that tag then blocks the next
-attempt (see the top of this file). Documentation and `chore:` commits are safe to push at
-any time; the run reports "no release" and succeeds.
-
-**Why the workflow does not need to change for the cutover.** `@semantic-release/npm` tries
-OIDC first. Today it logs `OIDC token exchange with the npm registry failed: 404 - package not
-found` — npm's way of saying no trusted publisher is configured — and falls back to the token,
-which then fails on `EOTP`. Once the publisher is configured the exchange succeeds and the
-token is never consulted. The workflow's preflight step reports which path is live on every
-run, and warns rather than fails when the token is present but unusable, so a stale secret
-cannot block an OIDC release.
-
-**After the first OIDC release succeeds**, delete the `NPM_TOKEN` repository secret and remove
-the `NPM_TOKEN` lines from `release.yml`. Not before: the preflight output on that run is the
-evidence that OIDC worked.
+Until the Trusted Publisher entry exists, a push of a `feat:` or `fix:` commit to `main`
+produces a run that fails at the verify step, with nothing committed and nothing tagged.
+Documentation and `chore:` commits produce a run that fails the same way, which is noise but
+not damage. Once the entry exists, every such push releases.
 
 ## How the version is chosen
 
@@ -145,11 +130,12 @@ gh label create semantic-release --color d4c5f9 --description "Automated release
   *unset* variable with the literal text `${NODE_AUTH_TOKEN}`, which it would then send to the
   registry as a bearer token on every request — including `npm ci`. setup-node v4 masked this
   by exporting a dummy value; v7 stopped doing so. `@semantic-release/npm` never needed that
-  file: it writes its own `.npmrc` from `NPM_TOKEN` or the exchanged OIDC token and passes it
-  to every npm command it runs.
-- The preflight step distinguishes the cases before semantic-release starts: no token means
-  "relying on Trusted Publishing"; a token that `npm whoami` rejects is a warning, not a
-  failure, for the reason above.
+  file: it writes its own `.npmrc` from the exchanged OIDC token and passes it to every npm
+  command it runs.
+- The verify step mints the same OIDC token `@semantic-release/npm` would, prints the claims
+  the npmjs.com form has to match, exchanges it with the registry, and fails the job before
+  semantic-release unless the registry answers 200. With `oidc_check=true` on a manual run it
+  reports and stops without releasing.
 
 ## Verifying a release candidate locally
 
