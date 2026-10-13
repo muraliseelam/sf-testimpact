@@ -7,10 +7,11 @@
  * user must be able to see exactly why in one line.
  */
 
-import { type Config } from '../config/schema.js';
+import { type Config, type TaintConfig } from '../config/schema.js';
+import { PARSE_FAILURE_CAUSE } from '../extract/apex.js';
 import { checkStaleness } from '../graph/store.js';
 import { type ImpactGraph } from '../graph/model.js';
-import { NodeFlags, hasFlag, type EntryPointKind, type NodeKey } from '../types.js';
+import { NodeFlags, hasFlag, type EntryPointKind, type NodeKey, type TaintDomain } from '../types.js';
 import { type ChangeSet } from './changeSet.js';
 
 export type DecisionLevel = 'fallback' | 'widen' | 'info';
@@ -121,7 +122,22 @@ export function checkFallbacks(
               'its effect on tests is unknown.',
             hint:
               'Add it to `excludeFromImpact` if you are certain no test depends on it, or set ' +
-              '`taint.unmodelledFileType: widen`.',
+              '`taint.unmodelledFileType: widen` to stop such files forcing a full run.',
+          });
+        } else {
+          // `widen` cannot widen anything here: nothing in the graph depends on a file type
+          // the tool does not model, so there is nothing to walk from. The setting means
+          // "do not force a full run for these", which is a reduction in safety, and a
+          // reduction in safety is never silent. This branch used to emit nothing at all.
+          decisions.push({
+            level: 'info',
+            rule: 'unmodelled-file-type-ignored',
+            subject: file.path,
+            message:
+              `${file.path} changed. It is a metadata type sf-testimpact does not model, and ` +
+              '`taint.unmodelledFileType: widen` is set, so the change is not analysed and ' +
+              'does not force a full run. Its effect on tests is unknown.',
+            hint: 'Remove `taint.unmodelledFileType: widen` to run the full suite when such a file changes.',
           });
         }
         break;
@@ -231,6 +247,72 @@ export function applyEntryPointPolicy(
         ],
       };
   }
+}
+
+/** The setting that decides how far a taint domain degrades, where one exists. */
+const SETTING_FOR_DOMAIN: Partial<Record<TaintDomain, keyof Pick<TaintConfig, 'dynamicApex' | 'dynamicSoql'>>> = {
+  apexType: 'dynamicApex',
+  sobjectAny: 'dynamicSoql',
+  fieldAny: 'dynamicSoql',
+};
+
+const RULE_FOR_SETTING = { dynamicApex: 'dynamic-apex-full', dynamicSoql: 'dynamic-soql-full' } as const;
+
+/**
+ * `taint.dynamicApex: full` and `taint.dynamicSoql: full` (DESIGN.md 6.2).
+ *
+ * By default a dynamic construct widens: when a change activates its taint domain, every
+ * class holding a construct in that domain is pulled into the impacted set. `full` asks for
+ * the conservative alternative — run everything instead — and this is where it happens.
+ * These two settings were validated and documented from the start but read by nothing, so
+ * setting either to `full` silently did nothing.
+ *
+ * Taint recorded for an unparseable file is not a dynamic construct; it is governed by
+ * `taint.onParseError` and is excluded here, or an unrelated parse failure would decide
+ * this setting.
+ *
+ * @param activated The domains the closure activated, each with the node that activated it.
+ */
+export function checkDynamicTaint(
+  graph: ImpactGraph,
+  activated: ReadonlyMap<TaintDomain, NodeKey>,
+  config: Config,
+): Decision[] {
+  const decisions: Decision[] = [];
+  const fired = new Set<string>();
+
+  for (const [domain, cause] of activated) {
+    const setting = SETTING_FOR_DOMAIN[domain];
+    if (setting === undefined || config.taint[setting] !== 'full' || fired.has(setting)) continue;
+
+    const dynamic = graph.taints.filter((t) => t.domain === domain && t.cause !== PARSE_FAILURE_CAUSE);
+    const first = dynamic[0];
+    if (first === undefined) continue;
+    fired.add(setting);
+
+    const holders = [...new Set(dynamic.map((t) => graph.nodeByKey(t.node)?.name ?? t.node))];
+    const firstHolder = holders[0] ?? first.node;
+    const activator = graph.nodeByKey(cause)?.name ?? cause;
+    const reach = domain === 'apexType' ? 'may call any class' : 'may read any object or field';
+    const others = holders.length - 1;
+
+    decisions.push({
+      level: 'fallback',
+      rule: RULE_FOR_SETTING[setting],
+      subject: firstHolder,
+      subjects: holders,
+      message:
+        `${firstHolder} uses ${first.cause}, so it ${reach}, and this change activated the ` +
+        `\`${domain}\` taint domain through ${activator}. \`taint.${setting}: full\` is set, so ` +
+        'the full suite runs instead of the tests that reach the dynamic code.' +
+        (others > 0 ? ` ${others} other class(es) hold a dynamic construct in this domain: ${summariseNames(holders.slice(1))}` : ''),
+      hint:
+        `\`taint.${setting}: widen\` (the default) selects the tests that reach these classes ` +
+        'instead of running everything.',
+    });
+  }
+
+  return decisions;
 }
 
 /**

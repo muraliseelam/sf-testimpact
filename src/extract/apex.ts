@@ -936,6 +936,16 @@ class CollectingErrorListener extends ApexErrorListener {
   }
 }
 
+/**
+ * The taint cause recorded for a file that could not be parsed.
+ *
+ * Named so the safety layer can tell taint that comes from a parse failure (governed by
+ * `taint.onParseError`) from taint that comes from a dynamic construct (governed by
+ * `taint.dynamicApex` and `taint.dynamicSoql`). It is persisted in the index, so changing
+ * the text changes what an existing index means.
+ */
+export const PARSE_FAILURE_CAUSE = 'file could not be parsed';
+
 /** `force-app/.../classes/AccountService.cls` -> `AccountService`. */
 function typeNameFromPath(path: string): string {
   const base = path.split(/[\\/]/).pop() ?? path;
@@ -959,7 +969,7 @@ function unparseableFacts(
 ): FileFacts {
   const name = typeNameFromPath(path);
   const loc: SourceLoc = { file: path, line: 1, column: 0 };
-  const cause = 'file could not be parsed';
+  const cause = PARSE_FAILURE_CAUSE;
   return {
     path,
     extractor: APEX_EXTRACTOR_ID,

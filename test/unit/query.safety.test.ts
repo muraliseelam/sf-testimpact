@@ -11,7 +11,8 @@ import { describe, expect, it } from 'vitest';
 import { analyze, formatDecisions } from '../../src/query/analyze.js';
 import { type ChangedFile } from '../../src/query/changeSet.js';
 import { type Decision } from '../../src/query/safety.js';
-import { CLASS_DIR, cls, configWith, graphOf, testNames } from '../helpers/buildGraph.js';
+import { CLASS_DIR, cls, configWith, field, graphOf, testNames } from '../helpers/buildGraph.js';
+import { type TaintConfig } from '../../src/config/schema.js';
 
 const modified = (path: string): ChangedFile => ({ path, kind: 'modified' });
 
@@ -77,6 +78,94 @@ describe('Level 3 fallback — an unmodelled metadata type changed', () => {
     const result = analyze(BASIC.graph, [modified(path)], config);
     expect(result.outcome).toBe('selected');
     expect(result.decisions.filter((d) => d.level === 'fallback')).toEqual([]);
+  });
+
+  it('says so when taint.unmodelledFileType: widen lets the change through unanalysed', () => {
+    // There is nothing to widen for a type the tool does not model, so `widen` means
+    // "do not force a full run". That is a reduction in safety, and it used to be silent:
+    // no decision at all.
+    const config = configWith({ taint: { ...configWith().taint, unmodelledFileType: 'widen' } });
+    const result = analyze(BASIC.graph, [modified(path)], config);
+    expect(result.outcome).toBe('selected');
+    const decision = ruleFired(result.decisions, 'unmodelled-file-type-ignored');
+    expect(decision.level).toBe('info');
+    expect(decision.subject).toBe(path);
+    expect(decision.message).toContain('not analysed');
+    expect(decision.message).toContain('taint.unmodelledFileType: widen');
+  });
+});
+
+describe('taint.dynamicApex and taint.dynamicSoql: full', () => {
+  // Both settings were validated and documented, and read by nothing: `full` did nothing.
+  const taintWith = (over: Partial<TaintConfig>) =>
+    configWith({ maxReductionPercent: 100, taint: { ...configWith().taint, ...over } });
+
+  const dynamicApex = graphOf([
+    cls('Widget', 'public class Widget { public static void run() {} }'),
+    cls('Dispatcher', 'public class Dispatcher { public static Type find(String n) { return Type.forName(n); } }'),
+    cls('DispatcherTest', "@IsTest private class DispatcherTest { @IsTest static void t() { Dispatcher.find('Widget'); } }"),
+    cls('WidgetTest', '@IsTest private class WidgetTest { @IsTest static void t() { Widget.run(); } }'),
+  ]);
+  const changedWidget = [modified(`${CLASS_DIR}/Widget.cls`)];
+
+  it('widens by default: the dispatching test is selected and nothing falls back', () => {
+    const result = analyze(dynamicApex.graph, changedWidget, taintWith({}));
+    expect(result.outcome).toBe('selected');
+    expect(testNames(result.tests)).toEqual(['DispatcherTest', 'WidgetTest']);
+    expect(result.decisions.some((d) => d.rule.startsWith('dynamic-'))).toBe(false);
+  });
+
+  it('dynamicApex: full runs the full suite and names the class that dispatches dynamically', () => {
+    const result = analyze(dynamicApex.graph, changedWidget, taintWith({ dynamicApex: 'full' }));
+    expect(result.outcome).toBe('full');
+    const decision = ruleFired(result.decisions, 'dynamic-apex-full');
+    expect(decision.level).toBe('fallback');
+    expect(decision.subject).toBe('Dispatcher');
+    expect(decision.subjects).toEqual(['Dispatcher']);
+    expect(decision.message).toContain('Type.forName');
+    expect(decision.message).toContain('taint.dynamicApex: full');
+    expect(decision.hint).toContain('taint.dynamicApex: widen');
+  });
+
+  it('dynamicApex: full does not count taint from an unparseable file, which onParseError governs', () => {
+    const withBroken = graphOf([
+      cls('Widget', 'public class Widget { public static void run() {} }'),
+      cls('WidgetTest', '@IsTest private class WidgetTest { @IsTest static void t() { Widget.run(); } }'),
+      cls('Broken', 'public class Broken { void m( { } }'),
+    ]);
+    const result = analyze(withBroken.graph, changedWidget, taintWith({ dynamicApex: 'full' }));
+    expect(result.decisions.some((d) => d.rule === 'dynamic-apex-full')).toBe(false);
+    expect(result.outcome).toBe('selected');
+  });
+
+  const fieldPath = 'force-app/main/default/objects/Invoice__c/fields/Amount__c.field-meta.xml';
+  const dynamicSoql = graphOf(
+    [
+      cls('Finder', 'public class Finder { public static List<SObject> run(String q) { return Database.query(q); } }'),
+      cls('FinderTest', "@IsTest private class FinderTest { @IsTest static void t() { Finder.run('SELECT Id FROM Account'); } }"),
+    ],
+    { extraFacts: [field('Invoice__c', 'Amount__c')] },
+  );
+
+  it('dynamicSoql widens by default when a field change reaches dynamic SOQL', () => {
+    const result = analyze(dynamicSoql.graph, [modified(fieldPath)], taintWith({}));
+    expect(result.outcome).toBe('selected');
+    expect(testNames(result.tests)).toEqual(['FinderTest']);
+  });
+
+  it('dynamicSoql: full runs the full suite, once, though the change activates two domains', () => {
+    const result = analyze(dynamicSoql.graph, [modified(fieldPath)], taintWith({ dynamicSoql: 'full' }));
+    expect(result.outcome).toBe('full');
+    const decision = ruleFired(result.decisions, 'dynamic-soql-full');
+    expect(decision.subject).toBe('Finder');
+    expect(decision.message).toContain('Database.query');
+    // A field change activates both sobjectAny and fieldAny; one setting, one decision.
+    expect(result.decisions.filter((d) => d.rule === 'dynamic-soql-full')).toHaveLength(1);
+  });
+
+  it('withholds the policy counterfactual, because changing entryPointPolicy would not help', () => {
+    const result = analyze(dynamicApex.graph, changedWidget, taintWith({ dynamicApex: 'full' }));
+    expect(result.counterfactual).toBeUndefined();
   });
 });
 

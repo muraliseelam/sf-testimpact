@@ -10,7 +10,13 @@ import { type ImpactGraph } from '../graph/model.js';
 import { type NodeKey, type TaintDomain } from '../types.js';
 import { resolveChangeSet, type ChangedFile } from './changeSet.js';
 import { computeImpacted } from './closure.js';
-import { applyEntryPointPolicy, checkFallbacks, checkReduction, type Decision } from './safety.js';
+import {
+  applyEntryPointPolicy,
+  checkDynamicTaint,
+  checkFallbacks,
+  checkReduction,
+  type Decision,
+} from './safety.js';
 import { coverageGaps, selectTests, type SelectedTest } from './selection.js';
 
 export type Outcome = 'selected' | 'full';
@@ -81,6 +87,8 @@ export function analyze(
         'Classes with unresolvable references into that domain are selected too.',
     });
   }
+  // `taint.dynamicApex` / `taint.dynamicSoql: full` turn an activation into a full run.
+  decisions.push(...checkDynamicTaint(graph, closure.activated, config));
 
   const selection = selectTests(graph, closure.impacted, config);
   decisions.push(
