@@ -103,11 +103,15 @@ jobs:
             "https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/sf-testimpact")"
           echo "npm exchange: HTTP ${code}"
           node -e 'const r = JSON.parse(require("fs").readFileSync("/tmp/exchange.json","utf8")); delete r.token; console.log("  " + JSON.stringify(r));' 2>/dev/null || cat /tmp/exchange.json
-          if [ "${code}" = "200" ]; then
-            echo "Trusted Publishing works."
-            exit 0
-          fi
-          msg="npm did not accept this workflow as a trusted publisher (HTTP ${code}). On npmjs.com, open the sf-testimpact package -> Settings -> Trusted Publisher -> GitHub Actions and enter exactly: organization or user 'muraliseelam', repository 'sf-testimpact', workflow filename 'release.yml', environment blank. Linking GitHub to the npm account is not the same thing."
+          # Any 2xx is success. The registry answers 201 Created with the exchanged token; the
+          # first version of this check accepted only 200 and so rejected a working setup.
+          case "${code}" in
+            2??)
+              echo "Trusted Publishing works."
+              exit 0
+              ;;
+          esac
+          msg="npm did not accept this workflow as a trusted publisher (HTTP ${code}). The package's Trusted Publisher must be GitHub Actions, repository 'muraliseelam/sf-testimpact', workflow file 'release.yml', no environment, AND it must grant the publish permission: an entry that grants only 'stage publish' is answered with this same 404. Check with: npm trust list sf-testimpact. Linking GitHub to the npm account is not the same thing."
           if [ "${{ inputs.oidc_check }}" = "true" ]; then
             echo "::warning::${msg}"
             exit 0
