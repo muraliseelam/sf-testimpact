@@ -287,8 +287,8 @@ size exceeds 8 MB (`graph.json.gz`).
 `.sf-testimpact/` is **git-ignored** and shipped in the scaffold's `.gitignore`. Committing
 it would make CI fast and diffs auditable, but every branch touching Apex would conflict on
 a 10 MB generated file. CI instead caches `.sf-testimpact/` keyed on a hash of the source
-tree, falling back to a full index on a miss. Both approaches are documented in the README;
-only the cache is the default.
+tree, falling back to a full index on a miss. Both approaches are documented in
+[CI integration](ci.md#cache-the-index); only the cache is the default.
 
 ### 4.5 Files that own many nodes
 
@@ -747,8 +747,8 @@ The command's output says so rather than implying a guarantee it cannot make.
 | `analyze` from a warm graph | < 2 s | one `JSON.parse`, `O(V+E)` CSR build, `O(V+E+T)` BFS |
 | `graph.json`, 5,000 classes | < 10 MB | columnar layout + string interning |
 
-**No performance numbers are claimed in this document.** The README carries the measured
-figures, against named repositories at named commits.
+**No performance numbers are claimed in this document.** [Benchmarks](benchmarks.md) carries
+the measured figures, against named repositories at named commits.
 
 ### The incremental target, revised after measurement
 
@@ -887,7 +887,7 @@ Stated plainly, because a tool like this is only trustworthy if its gaps are doc
 | 2 | Invocation from outside the repo (scheduled jobs, REST clients) | mitigated — entry-point taint (§6.3) |
 | 3 | Tests depending on live org data | mitigated — `SEE_ALL_DATA` always runs (§6.4) |
 | 3b | Tests seeding data from a static resource | mitigated — `usesResource` edge for a literal name, `resourceAny` taint for a computed one (§6.4) |
-| 4 | Managed-package behaviour change | **not mitigated** — no source. Package version bumps must force a full run; documented in README limitations |
+| 4 | Managed-package behaviour change | **not mitigated** — no source. Package version bumps must force a full run; documented in [limitations](limitations.md) |
 | 5 | Custom Metadata / Custom Setting *records* driving behaviour | **partial** — record files in the repo are indexed; org-side records are invisible |
 | 6 | Trigger execution *order* changed via handler configuration | **not mitigated** — order is org state |
 | 7 | Formula fields and validation rules | mitigated — `formulaRef` edges (§4.3) |
@@ -1022,7 +1022,7 @@ Resolved during design review; recorded here so the rationale survives.
 | 2 | Bench result format | **`sf apex run test --json` first, JUnit XML second**, both behind a pluggable `TestResultAdapter` (§11.1). |
 | 3 | LWC / Aura | ~~In v1, via regex~~ — **SUPERSEDED.** Shipped, measured at zero contribution by the §11.2 ablation, and deleted as §12.1 licensed. See §5.5. |
 | 4 | Multi-package | **Single namespace, multiple `packageDirectories` for v1**, but node identity is namespace-qualified *now* so 2GP is additive rather than a graph migration (§4.1). |
-| 5 | `graph.json` in git | **Not committed.** `.sf-testimpact/` is git-ignored; CI caches it keyed on a source-tree hash. Both approaches documented in the README (§4.4). |
+| 5 | `graph.json` in git | **Not committed.** `.sf-testimpact/` is git-ignored; CI caches it keyed on a source-tree hash. Both approaches documented in [CI integration](ci.md#cache-the-index) (§4.4). |
 
 ---
 

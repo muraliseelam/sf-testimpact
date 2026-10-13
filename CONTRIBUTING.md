@@ -41,10 +41,21 @@ Extractors are pure functions `(filePath, contents) -> FileFacts`. They do no I/
 state, and know nothing about the graph. Add fixtures under `test/fixtures/` and test the
 facts directly.
 
-Every extractor has an identity string (for example `apex@1`). **Bump it whenever your
+Every extractor has an identity string (for example `apex@2`). **Bump it whenever your
 change alters what the extractor emits.** A stale index that silently mixes old and new
 facts is exactly the class of bug this project cannot afford; the identity is what forces a
 re-index instead.
+
+## Documentation
+
+User documentation lives in [`docs/`](docs/README.md). Two rules keep it honest:
+
+- **The command reference is generated.** After changing a command's flags, description or
+  examples, run `npm run docs:commands` and commit the updated `docs/commands.md`. CI fails
+  when it is out of date.
+- **Every figure needs an artifact.** A number in the README or `docs/benchmarks.md` must be
+  reproduced by a file in `docs/measurements/`, as the [evidence audit](docs/AUDIT.md)
+  requires. Output quoted in the docs is captured from real runs, not written by hand.
 
 ## Adding a dependency
 

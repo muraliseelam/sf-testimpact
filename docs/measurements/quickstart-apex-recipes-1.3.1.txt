@@ -1,0 +1,84 @@
+Verbatim capture. Repository: https://github.com/trailheadapps/apex-recipes (CC0-1.0)
+Commit under test: 2e2c1c3a8b197de06d6b709b877d1147c79fe26c  (chore: clean log)
+Base (parent):     0238895a89f5a87e3c3242d266eb68974d096f80
+Changed files:     force-app/main/default/classes/Platform Event Recipes/PlatformEventPublishCallback.cls 
+Plugin:            sf-testimpact working tree at 941e0d2 (the fixes released as 1.3.1), linked with `sf plugins link`
+Captured:          2026-10-13T03:49:08Z with @salesforce/cli/2.153.5
+Removed:           the warning sf prints for a linked plugin, and the index spinner's progress frames
+
+--- first index ---
+$ sf testimpact index
+
+Indexing... done
+Indexed 204 files: 204 parsed, 0 unchanged
+647 nodes, 1126 edges, 50 taints
+Wrote .sf-testimpact/graph.json
+[exit 0]
+
+--- second index, nothing changed ---
+$ sf testimpact index
+Indexing... done
+Indexed 204 files: 0 parsed, 204 unchanged
+647 nodes, 1126 edges, 50 taints
+Wrote .sf-testimpact/graph.json
+[exit 0]
+
+--- shipped defaults (no .sf-testimpact.yml; entryPointPolicy: full) ---
+$ sf testimpact analyze --base 0238895a89f5a87e3c3242d266eb68974d096f80
+Changed files: 1  (0238895a89f5a87e3c3242d266eb68974d096f80...HEAD)
+
+FALLBACK  entry-point-policy-full: QueueableChainingRecipes is an entry point (queueable), so its callers may live outside this repository and the graph’s inbound edges to it are incomplete. 5 other impacted entry point(s): LDVRecipes, QueueableWithCalloutRecipes, AccountTrigger, CustomRestEndpointRecipes, InboundEmailHandlerRecipes.
+          hint: `entryPointPolicy: widen` selects only the tests that reach an entry point of the same kind. Faster, but it assumes no unindexed caller reaches these classes.
+WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because PlatformEventPublishCallback is impacted. Classes with unresolvable references into that domain are selected too.
+
+Running the full suite (RunLocalTests). See the FALLBACK lines above.
+
+With `entryPointPolicy: widen` this change set would select 29 of 68 tests (57.35% skipped).
+  That assumes nothing outside this repository calls: QueueableChainingRecipes, LDVRecipes, QueueableWithCalloutRecipes, AccountTrigger, CustomRestEndpointRecipes, InboundEmailHandlerRecipes
+[exit 0]
+
+--- .sf-testimpact.yml -> entryPointPolicy: widen ---
+$ sf testimpact analyze --base 0238895a89f5a87e3c3242d266eb68974d096f80
+Changed files: 1  (0238895a89f5a87e3c3242d266eb68974d096f80...HEAD)
+
+WIDEN     entry-point-policy-widen: QueueableChainingRecipes is an entry point (queueable). Widening to 3 other entry point(s) of the same kind (queueable, trigger, rest, global, email), because an unindexed caller may reach the same subsystem through one of them.
+WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because PlatformEventRecipesTrigger is impacted. Classes with unresolvable references into that domain are selected too.
+
+Selected 29 of 68 tests (57.4% skipped)
+  AccountServiceLayer_Tests
+  AccountTriggerHandler_Tests
+  AuraEnabledRecipes_Tests
+  BatchApexRecipes_Tests
+  CalloutRecipes_Tests
+  CanTheUser_Tests
+  CollectionUtils_Tests
+  CustomMetadataRecipes_Tests
+  CustomRestEndpointRecipes_Tests
+  FilesRecipes_Tests
+  InboundEmailHandlerRecipes_tests
+  InvocableMethodRecipes_Tests
+  LDVRecipes_Tests
+  MetadataTriggerHandler_Tests
+  OrderAppMenu_Tests
+  OrgShape_Tests  [see-all-data]
+  PSGAdvancedTestingRecipes
+  PSGTestingRecipes
+  PlatformCacheBuilderRecipes_Tests
+  PlatformEventRecipesTriggerHandler_Tests
+  PlatformEventRecipes_Tests
+  QueueableChainingRecipes_Tests
+  QueueableRecipes_Tests
+  QueueableWithCalloutRecipes_Tests
+  SOQLRecipes_Tests
+  Safely_Tests
+  ScheduledApexRecipes_Tests
+  StripInaccessibleRecipes_Tests
+  TestFactory
+[exit 0]
+
+--- deploy, printed rather than run ---
+$ sf testimpact deploy --base 0238895a89f5a87e3c3242d266eb68974d096f80 --target-org my-sandbox --dry-run
+Running 29 of 68 tests (RunSpecifiedTests).
+sf project deploy start --test-level RunSpecifiedTests --tests AccountServiceLayer_Tests --tests AccountTriggerHandler_Tests --tests AuraEnabledRecipes_Tests --tests BatchApexRecipes_Tests --tests CalloutRecipes_Tests --tests CanTheUser_Tests --tests CollectionUtils_Tests --tests CustomMetadataRecipes_Tests --tests CustomRestEndpointRecipes_Tests --tests FilesRecipes_Tests --tests InboundEmailHandlerRecipes_tests --tests InvocableMethodRecipes_Tests --tests LDVRecipes_Tests --tests MetadataTriggerHandler_Tests --tests OrderAppMenu_Tests --tests OrgShape_Tests --tests PSGAdvancedTestingRecipes --tests PSGTestingRecipes --tests PlatformCacheBuilderRecipes_Tests --tests PlatformEventRecipesTriggerHandler_Tests --tests PlatformEventRecipes_Tests --tests QueueableChainingRecipes_Tests --tests QueueableRecipes_Tests --tests QueueableWithCalloutRecipes_Tests --tests SOQLRecipes_Tests --tests Safely_Tests --tests ScheduledApexRecipes_Tests --tests StripInaccessibleRecipes_Tests --tests TestFactory --target-org my-sandbox
+[exit 0]
+

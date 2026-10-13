@@ -1,0 +1,90 @@
+# Before/after transcript: two defects found while documenting 1.3.0, fixed in 1.3.1.
+# Project: test/fixtures/sample-project, given an sfdx-project.json and committed to main;
+# branch feature/pricing changes one line of PricingService.cls. Sections 1 and 2 put the
+# project in the sf/ subdirectory of its repository; section 3 puts it at the root.
+# Before: sf-testimpact at tag v1.3.0 (8772be7), built and run through oclif's execute(),
+# the entry point sf uses. After: this repository's working tree, based on 941e0d2, linked
+# with `sf plugins link`. The warning sf prints for a linked plugin, and the index spinner's
+# progress frames, are removed.
+# Generated 2026-10-13T03:49:39Z by sf @salesforce/cli/2.153.5.
+
+## What git reports from the project directory, sf/
+$ git diff --name-status main...HEAD
+M	sf/force-app/main/default/classes/PricingService.cls
+$ git diff --name-status --relative main...HEAD
+M	force-app/main/default/classes/PricingService.cls
+
+## 1. A project in a subdirectory of its repository, shipped defaults
+### before (1.3.0)
+$ node .wt-before/run.mjs testimpact index
+
+Indexing... done
+Indexed 10 files: 10 parsed, 0 unchanged
+18 nodes, 18 edges, 3 taints
+Wrote .sf-testimpact/graph.json
+[exit 0]
+
+$ node .wt-before/run.mjs testimpact analyze --base main
+Changed files: 1  (main...HEAD)
+
+Selected 1 of 3 tests (66.7% skipped)
+  LegacyDataTest  [see-all-data]
+[exit 0]
+
+### after
+$ sf testimpact index
+
+Indexing... done
+Indexed 10 files: 10 parsed, 0 unchanged
+18 nodes, 18 edges, 3 taints
+Wrote .sf-testimpact/graph.json
+[exit 0]
+
+$ sf testimpact analyze --base main
+Changed files: 1  (main...HEAD)
+
+FALLBACK  entry-point-policy-full: AccountTrigger is an entry point (trigger), so its callers may live outside this repository and the graph’s inbound edges to it are incomplete.
+          hint: `entryPointPolicy: widen` selects only the tests that reach an entry point of the same kind. Faster, but it assumes no unindexed caller reaches this class.
+WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because PricingService is impacted. Classes with unresolvable references into that domain are selected too.
+
+Running the full suite (RunLocalTests). See the FALLBACK lines above.
+
+With `entryPointPolicy: widen` this change set would select 3 of 3 tests (0% skipped).
+  That assumes nothing outside this repository calls: AccountTrigger
+[exit 0]
+
+## 2. The same project with entryPointPolicy: widen
+### before (1.3.0)
+$ node .wt-before/run.mjs testimpact analyze --base main
+Changed files: 1  (main...HEAD)
+
+Selected 1 of 3 tests (66.7% skipped)
+  LegacyDataTest  [see-all-data]
+[exit 0]
+
+### after
+$ sf testimpact analyze --base main
+Changed files: 1  (main...HEAD)
+
+WIDEN     entry-point-policy-widen: AccountTrigger is an entry point (trigger). Widening to 0 other entry point(s) of the same kind (trigger), because an unindexed caller may reach the same subsystem through one of them.
+WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because PricingService is impacted. Classes with unresolvable references into that domain are selected too.
+
+Selected 3 of 3 tests (0.0% skipped)
+  DispatcherTest
+  LegacyDataTest  [see-all-data]
+  PricingServiceTest
+[exit 0]
+
+## 3. A flag repeated after --, project at the repository root, entryPointPolicy: widen
+### before (1.3.0)
+$ node .wt-before/run.mjs testimpact deploy --base main --target-org my-sandbox --dry-run -- --source-dir force-app/main/default/classes/PricingService.cls --source-dir force-app/main/default/classes/PricingServiceTest.cls
+Running 3 of 3 tests (RunSpecifiedTests).
+sf project deploy start --test-level RunSpecifiedTests --tests DispatcherTest --tests LegacyDataTest --tests PricingServiceTest --target-org my-sandbox --source-dir --source-dir force-app/main/default/classes/PricingService.cls force-app/main/default/classes/PricingServiceTest.cls
+[exit 0]
+
+### after
+$ sf testimpact deploy --base main --target-org my-sandbox --dry-run -- --source-dir force-app/main/default/classes/PricingService.cls --source-dir force-app/main/default/classes/PricingServiceTest.cls
+Running 3 of 3 tests (RunSpecifiedTests).
+sf project deploy start --test-level RunSpecifiedTests --tests DispatcherTest --tests LegacyDataTest --tests PricingServiceTest --target-org my-sandbox --source-dir force-app/main/default/classes/PricingService.cls --source-dir force-app/main/default/classes/PricingServiceTest.cls
+[exit 0]
+

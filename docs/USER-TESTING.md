@@ -382,8 +382,10 @@ sf project deploy start --test-level RunSpecifiedTests --tests AccountServiceLay
 exit=0
 ```
 
-**Fixed:** everything after `--` is passed through unchanged, in order, and the command's
-help and the README now say so.
+**Fixed:** everything after `--` is passed through unchanged, and the command's help and the
+[commands reference](commands.md#deploy) now say so. It was not yet always in the order
+written; that is [E2](#e2-a-flag-repeated-after----lost-its-pairing-with-its-values), fixed in
+1.3.1.
 
 ## D4. On Windows, a path with a space was split in two
 
@@ -459,8 +461,74 @@ seen a green deploy with 29 of 68 test classes.
 | --- | --- | --- | --- |
 | D1 | `--verify-coverage` always failed: `Body` cannot be filtered in a Tooling query | **High**: the only org path never worked | **Fixed**, with paging |
 | D2 | Org-only-test marker matched a doc comment and reported a non-test | Medium: spurious drift warning | **Fixed**: line-anchored |
-| D3 | Flag passthrough rejected by oclif; after `--`, values dropped | Medium: documented feature did not work | **Fixed**: `--` form, values kept |
+| D3 | Flag passthrough rejected by oclif; after `--`, values dropped | Medium: documented feature did not work | **Fixed**: `--` form, values kept; order fixed in 1.3.1 (E2) |
 | D4 | Windows: a path with a space split into two arguments | Medium: any space-containing path | **Fixed**: quoted for `cmd.exe` |
 | D5 | Whole-directory payload fails per-class coverage | Guidance: deploy the delta | Documented |
 | D0 | `index` spinner frames repeat when stdout is not a TTY | Low: cosmetic | Not fixed; the CLI's spinner |
 | D6 | End-to-end deploy with selected tests | | Works; blocked by a genuine test failure |
+
+# Documentation pass (2026-10-13)
+
+Writing the user documentation against the code, rather than against the README, meant
+running every documented command and quoting its output. Two defects surfaced that a user
+would hit, and that neither the unit tests nor the live-org session had exercised. Both are
+fixed in 1.3.1. The full before-and-after transcript is
+[`fixes-1.3.1-before-after.txt`](measurements/fixes-1.3.1-before-after.txt). "Before" is the
+`v1.3.0` tag, built and run through oclif's `execute()`, the entry point `sf` uses. "After" is
+the fixed working tree, linked with `sf plugins link`.
+
+## E1. A project in a subdirectory of its repository had every change ignored
+
+`git diff` prints paths from the repository root, even when it runs in a subdirectory:
+
+```
+$ git diff --name-status main...HEAD
+M	sf/force-app/main/default/classes/PricingService.cls
+```
+
+The index stores paths from the project root, `force-app/...`, so no changed path matched.
+Each was treated as outside the source paths and ignored, and the analysis selected only the
+tests that run regardless of the change. On the shipped defaults, 1.3.0 printed:
+
+```
+$ node .wt-before/run.mjs testimpact analyze --base main
+Changed files: 1  (main...HEAD)
+
+Selected 1 of 3 tests (66.7% skipped)
+  LegacyDataTest  [see-all-data]
+```
+
+`PricingServiceTest`, the test of the changed class, was skipped with no `FALLBACK` line and
+no warning. That is the failure this tool exists to prevent, and it happened under the
+conservative default. 1.3.1 asks git for project-relative paths with `--relative`. The same
+change now reaches the trigger and falls back to the full suite, and with
+`entryPointPolicy: widen` it selects all 3 tests.
+
+Nothing had caught it because every project it had run on keeps `sfdx-project.json` at the
+root of its repository: the test fixtures, apex-recipes and NPSP.
+
+## E2. A flag repeated after `--` lost its pairing with its values
+
+D3 made `--` pass flags through. The fix took them from oclif's parsed `argv`, which oclif
+sorts by where each token first appears on the command line:
+
+```
+$ node .wt-before/run.mjs testimpact deploy --base main --target-org my-sandbox --dry-run -- --source-dir force-app/main/default/classes/PricingService.cls --source-dir force-app/main/default/classes/PricingServiceTest.cls
+Running 3 of 3 tests (RunSpecifiedTests).
+sf project deploy start --test-level RunSpecifiedTests --tests DispatcherTest --tests LegacyDataTest --tests PricingServiceTest --target-org my-sandbox --source-dir --source-dir force-app/main/default/classes/PricingService.cls force-app/main/default/classes/PricingServiceTest.cls
+```
+
+A token that also appears before `--`, such as `--dry-run`, moved to the front in the same
+way. 1.3.1 reads the raw command line after `--`, so each flag keeps its value, in the order
+written. An argument that is not a flag, placed before `--`, used to be forwarded as well; it
+is now reported as `CONFIG_INVALID` before any work is done.
+
+## Findings
+
+| # | Finding | Severity | Fixed |
+| --- | --- | --- | --- |
+| E1 | A project in a subdirectory of its repository had every change ignored | **High**: a silent false negative, at the default | **Fixed** in 1.3.1: `git diff --relative` |
+| E2 | A flag repeated after `--` reached `sf project deploy start` reordered | Medium: the deploy command is malformed | **Fixed** in 1.3.1: the raw command line after `--` |
+
+The other defects the documentation pass found, such as `taint.dynamicApex` having no
+effect, are fixed in the same release and listed in the [changelog](../CHANGELOG.md).

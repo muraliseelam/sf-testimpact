@@ -50,7 +50,8 @@
     "check": "npm run lint && npm run build && npm run test",
     "prepack": "npm run clean:lib && npm run build && oclif manifest",
     "postpack": "node -e \"require('node:fs').rmSync('oclif.manifest.json',{force:true})\"",
-    "clean:lib": "node -e \"const fs=require('node:fs');fs.rmSync('lib',{recursive:true,force:true});fs.rmSync('tsconfig.tsbuildinfo',{force:true})\""
+    "clean:lib": "node -e \"const fs=require('node:fs');fs.rmSync('lib',{recursive:true,force:true});fs.rmSync('tsconfig.tsbuildinfo',{force:true})\"",
+    "docs:commands": "npm run build && oclif readme --readme-path docs/commands.md --no-source-links"
   },
   "dependencies": {
     "@apexdevtools/apex-parser": "5.2.0",

@@ -8,6 +8,11 @@ The rule applied: a claim survives only if an artifact in this repository reprod
 no artifact exists, the claim is **deleted** rather than softened. If an artifact exists but
 disagrees, the prose is **corrected** to match the artifact.
 
+> On 2026-10-13 the README's measured and limitations sections moved, unchanged, to
+> [benchmarks](benchmarks.md) and [limitations](limitations.md). A row below that cites a
+> README section other than the quickstart now refers to the same section on one of those
+> pages.
+
 ## Summary
 
 | Verdict | Count |

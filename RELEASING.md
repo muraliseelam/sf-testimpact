@@ -188,6 +188,8 @@ is `vX.Y.Z` and is pushed.
       oidc_check=true` confirms it without releasing.
 - [ ] `npm run check` passes.
 - [ ] `npm pack --dry-run` shows `oclif.manifest.json` and no `lib/bench/`.
-- [ ] `README.md` benchmark figures still match `docs/measurements/`.
-- [ ] The limitations table reflects the code as shipped.
+- [ ] Figures in `README.md` and `docs/benchmarks.md` still match `docs/measurements/`.
+- [ ] The table in `docs/limitations.md` reflects the code as shipped.
+- [ ] A "since" or "before" version added to `docs/` for this release names the version
+      actually being released.
 - [ ] The `semantic-release` label exists (forks only — see above).

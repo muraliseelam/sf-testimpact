@@ -1,0 +1,257 @@
+# Transcript behind the command output quoted in the documentation.
+# Project: test/fixtures/sample-project, copied, given an sfdx-project.json, committed to
+# main; branch feature/pricing changes one line of PricingService.cls.
+# Plugin: this repository's working tree at 941e0d2, linked with
+# `sf plugins link`; the warning sf prints for a linked plugin, and the index spinner's
+# progress frames, are removed.
+# Generated 2026-10-13T03:51:20Z by sf @salesforce/cli/2.153.5.
+
+## index
+$ sf testimpact index
+
+Indexing... done
+Indexed 10 files: 10 parsed, 0 unchanged
+18 nodes, 18 edges, 3 taints
+Wrote .sf-testimpact/graph.json
+[exit 0]
+
+## analyze, shipped defaults
+$ sf testimpact analyze --base main
+Changed files: 1  (main...HEAD)
+
+FALLBACK  entry-point-policy-full: AccountTrigger is an entry point (trigger), so its callers may live outside this repository and the graph’s inbound edges to it are incomplete.
+          hint: `entryPointPolicy: widen` selects only the tests that reach an entry point of the same kind. Faster, but it assumes no unindexed caller reaches this class.
+WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because PricingService is impacted. Classes with unresolvable references into that domain are selected too.
+
+Running the full suite (RunLocalTests). See the FALLBACK lines above.
+
+With `entryPointPolicy: widen` this change set would select 3 of 3 tests (0% skipped).
+  That assumes nothing outside this repository calls: AccountTrigger
+[exit 0]
+
+## analyze --json, shipped defaults
+$ sf testimpact analyze --base main --json
+{
+  "status": 0,
+  "result": {
+    "schemaVersion": 1,
+    "toolVersion": "1.3.0",
+    "outcome": "full",
+    "testLevel": "RunLocalTests",
+    "tests": [],
+    "selectedCount": 0,
+    "totalTests": 3,
+    "reductionPercent": 0,
+    "decisions": [
+      {
+        "level": "fallback",
+        "rule": "entry-point-policy-full",
+        "subject": "AccountTrigger",
+        "subjects": [
+          "AccountTrigger"
+        ],
+        "message": "AccountTrigger is an entry point (trigger), so its callers may live outside this repository and the graph’s inbound edges to it are incomplete.",
+        "hint": "`entryPointPolicy: widen` selects only the tests that reach an entry point of the same kind. Faster, but it assumes no unindexed caller reaches this class."
+      },
+      {
+        "level": "widen",
+        "rule": "taint-domain-activated-apexType",
+        "subject": "PricingService",
+        "subjects": [
+          "PricingService"
+        ],
+        "message": "Taint domain `apexType` activated because PricingService is impacted. Classes with unresolvable references into that domain are selected too.",
+        "hint": null
+      }
+    ],
+    "counterfactual": {
+      "policy": "widen",
+      "wouldSelect": 3,
+      "totalTests": 3,
+      "reductionPercent": 0,
+      "assumesNoExternalCallerOf": [
+        "AccountTrigger"
+      ]
+    },
+    "fellBack": true,
+    "activatedTaintDomains": [
+      "apexType"
+    ],
+    "coverageGaps": [],
+    "range": {
+      "base": "main",
+      "head": "HEAD"
+    },
+    "changedFiles": 1,
+    "graph": {
+      "nodes": 18,
+      "edges": 18,
+      "createdAt": "2026-10-13T03:51:30.079Z",
+      "indexedFiles": 10
+    }
+  },
+  "warnings": []
+}
+[exit 0]
+
+## analyze --fail-on-fallback
+$ sf testimpact analyze --base main --fail-on-fallback
+Changed files: 1  (main...HEAD)
+
+FALLBACK  entry-point-policy-full: AccountTrigger is an entry point (trigger), so its callers may live outside this repository and the graph’s inbound edges to it are incomplete.
+          hint: `entryPointPolicy: widen` selects only the tests that reach an entry point of the same kind. Faster, but it assumes no unindexed caller reaches this class.
+WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because PricingService is impacted. Classes with unresolvable references into that domain are selected too.
+
+Running the full suite (RunLocalTests). See the FALLBACK lines above.
+
+With `entryPointPolicy: widen` this change set would select 3 of 3 tests (0% skipped).
+  That assumes nothing outside this repository calls: AccountTrigger
+[exit 1]
+
+## analyze --fail-on-fallback --json (status field)
+{"status":1,"fellBack":true,"outcome":"full"}
+[exit 1]
+
+## analyze with entryPointPolicy: widen
+$ sf testimpact analyze --base main
+Changed files: 1  (main...HEAD)
+
+WIDEN     entry-point-policy-widen: AccountTrigger is an entry point (trigger). Widening to 0 other entry point(s) of the same kind (trigger), because an unindexed caller may reach the same subsystem through one of them.
+WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because PricingService is impacted. Classes with unresolvable references into that domain are selected too.
+
+Selected 3 of 3 tests (0.0% skipped)
+  DispatcherTest
+  LegacyDataTest  [see-all-data]
+  PricingServiceTest
+[exit 0]
+
+## deploy --dry-run with entryPointPolicy: widen
+$ sf testimpact deploy --base main --target-org my-sandbox --dry-run
+Running 3 of 3 tests (RunSpecifiedTests).
+sf project deploy start --test-level RunSpecifiedTests --tests DispatcherTest --tests LegacyDataTest --tests PricingServiceTest --target-org my-sandbox
+[exit 0]
+
+## deploy --dry-run with passthrough after --
+$ sf testimpact deploy --base main --target-org my-sandbox --dry-run -- --manifest delta/package/package.xml --wait 60
+Running 3 of 3 tests (RunSpecifiedTests).
+sf project deploy start --test-level RunSpecifiedTests --tests DispatcherTest --tests LegacyDataTest --tests PricingServiceTest --target-org my-sandbox --manifest delta/package/package.xml --wait 60
+[exit 0]
+
+## sf's own --dry-run after --: passed through, not taken as deploy's --dry-run
+$ sf testimpact deploy --base main --target-org my-sandbox --dry-run -- --manifest delta/package/package.xml --dry-run --wait 60
+Running 3 of 3 tests (RunSpecifiedTests).
+sf project deploy start --test-level RunSpecifiedTests --tests DispatcherTest --tests LegacyDataTest --tests PricingServiceTest --target-org my-sandbox --manifest delta/package/package.xml --dry-run --wait 60
+[exit 0]
+
+## analyze with taint.dynamicApex: full
+$ sf testimpact analyze --base main
+Changed files: 1  (main...HEAD)
+
+WIDEN     entry-point-policy-widen: AccountTrigger is an entry point (trigger). Widening to 0 other entry point(s) of the same kind (trigger), because an unindexed caller may reach the same subsystem through one of them.
+WIDEN     taint-domain-activated-apexType: Taint domain `apexType` activated because PricingService is impacted. Classes with unresolvable references into that domain are selected too.
+FALLBACK  dynamic-apex-full: Dispatcher uses Type.forName, so it may call any class, and this change activated the `apexType` taint domain through PricingService. `taint.dynamicApex: full` is set, so the full suite runs instead of the tests that reach the dynamic code.
+          hint: `taint.dynamicApex: widen` (the default) selects the tests that reach these classes instead of running everything.
+
+Running the full suite (RunLocalTests). See the FALLBACK lines above.
+[exit 0]
+
+## an unknown config key
+$ sf testimpact analyze --base main
+Error (CONFIG_INVALID): Unknown config key: `maxReductionPct`.
+
+
+Try this:
+
+Valid keys are `version`, `sourcePaths`, `alwaysRun`, `excludeFromImpact`, `maxReductionPercent`, `onExceed`, `entryPointPolicy`, `taint`, `fullTestLevel`. Unknown keys are rejected because a typo in a safety setting would otherwise disable it silently.
+
+[exit 1]
+
+## a base ref that does not exist
+$ sf testimpact analyze --base no-such-branch
+fatal: ambiguous argument 'no-such-branch...HEAD': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+Error (GIT_FAILED): Could not diff no-such-branch...HEAD.
+
+
+Try this:
+
+Check that both refs exist here. In CI this usually means the clone is shallow: actions/checkout defaults to fetch-depth 1, which has neither the base branch nor a merge base. Set fetch-depth: 0, or fetch the base ref unshallowed.
+
+[exit 1]
+
+## an undeclared flag (usage error)
+$ sf testimpact analyze --base main --source-dir force-app
+Error (2): Nonexistent flag: --source-dir
+See more help with --help
+
+
+[exit 2]
+
+## a required flag missing
+$ sf testimpact analyze
+Error (2): The following error occurred:
+  Missing required flag base
+See more help with --help
+
+
+[exit 2]
+
+## no files changed
+$ sf testimpact analyze --base main
+Changed files: 0  (main...HEAD)
+
+No files changed between main and HEAD, so there is nothing to select. This is not a reduction.
+  If you meant to compare a branch, check out that branch first, or pass --base and --head explicitly.
+[exit 0]
+
+## the error envelope under --json (stack and cause elided: they hold local paths)
+$ sf testimpact analyze --base no-such-branch --json
+{
+  "name": "TestImpactError",
+  "message": "Could not diff no-such-branch...HEAD.",
+  "exitCode": 1,
+  "actions": [
+    "Check that both refs exist here. In CI this usually means the clone is shallow: actions/checkout defaults to fetch-depth 1, which has neither the base branch nor a merge base. Set fetch-depth: 0, or fetch the base ref unshallowed."
+  ],
+  "context": "TestImpactAnalyze",
+  "stack": "<elided>",
+  "cause": "<elided>",
+  "warnings": [],
+  "code": "GIT_FAILED",
+  "status": 1,
+  "commandName": "TestImpactAnalyze"
+}
+[exit 1]
+
+## no index
+$ sf testimpact analyze --base main
+Error (GRAPH_STALE): No index found for this project.
+
+
+Try this:
+
+Run `sf testimpact index` first.
+
+[exit 1]
+
+## index --json
+$ sf testimpact index --json
+{
+  "status": 0,
+  "result": {
+    "path": ".sf-testimpact/graph.json",
+    "files": 10,
+    "extracted": 10,
+    "reused": 0,
+    "removed": 0,
+    "nodes": 18,
+    "edges": 18,
+    "taints": 3,
+    "unparseable": [],
+    "rebuiltBecause": null
+  },
+  "warnings": []
+}
+[exit 0]
+

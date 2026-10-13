@@ -179,7 +179,8 @@ number with a caveat.
   large relative to the newly-failing set, the measurement says more about the org than the
   selector.
 - **Scratch orgs are not production orgs.** The largest documented false-negative source is
-  tests present in an org but absent from the repository (README limitation 14). A scratch
+  tests present in an org but absent from the repository
+  ([limitation 14](limitations.md#items-14-and-15-deserve-separate-emphasis)). A scratch
   org built from the repository has none by construction, so this design **cannot** measure
   the tool's biggest known hole. That limit must be stated with any result it produces.
 - **A green window measures nothing.** If the chosen window has no newly-failing pairs, the
@@ -359,7 +360,8 @@ not of the tool.
 **Outcome counts** rose from 302 methods at the oldest commit to 322 at the newest, with 61
 to 68 test classes in the graph over the same range; no `Skip` outcomes were recorded.
 
-**Comparability with the offline window.** The README's selection-quality table measures a
+**Comparability with the offline window.** The
+[selection-quality table](benchmarks.md#selection-quality) measures a
 different 30 commits (the 30 most recent touching `.cls`/`.trigger` up to the same head, not
 first-parent, not source-change filtered), so its fallback and reduction figures differ from
 the ones above. Both are correct for their window; neither is "the" number.
