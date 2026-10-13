@@ -5,47 +5,59 @@ to the default branch runs `.github/workflows/release.yml`, which lints, builds,
 then — only if all three pass — determines the next version from the commit messages,
 publishes to npm, tags the commit, and writes `CHANGELOG.md`.
 
-## Current state: 1.3.0 is ready and waits on one npmjs.com setting
+## Current state: releases publish through Trusted Publishing, with provenance
 
-**Where things stand on 2026-10-13.** Every commit for 1.3.0 is on `main`. npm is at 1.2.0.
-The workflow now refuses to start a release unless npm accepts this repository's OIDC token
-(the "Verify the npm Trusted Publishing exchange" step), and that exchange currently answers
-`404 OIDC token exchange error - package not found`: **npm has no Trusted Publisher entry
-matching this workflow.** Linking a GitHub account to the npm account is not that entry.
+**1.3.0 was published on 2026-10-13 by the Release workflow**
+([run 38337654488](https://github.com/muraliseelam/sf-testimpact/actions/runs/38337654488))
+through npm Trusted Publishing: no token, an SLSA provenance attestation
+(`https://slsa.dev/provenance/v1`), and verified registry signatures. It is the first release
+since 0.1.0 to reach npm from the workflow. There is no `NPM_TOKEN` secret any more, and the
+workflow does not read one.
 
-**The one thing to do.** On npmjs.com, open the `sf-testimpact` package → **Settings** →
-**Trusted Publisher** → **GitHub Actions**, and enter exactly what the token carries:
+**The Trusted Publisher entry**, as `npm trust list sf-testimpact` shows it:
 
 | Field | Value |
 | --- | --- |
-| Organization or user | `muraliseelam` |
-| Repository | `sf-testimpact` |
-| Workflow filename | `release.yml` |
-| Environment | leave blank |
+| Provider | GitHub Actions |
+| Repository | `muraliseelam/sf-testimpact` |
+| Workflow file | `release.yml` |
+| Environment | none |
+| Permissions | publish, stage publish |
 
-Those four values are printed by the verify step on every run as `repository_owner`,
-`repository`, `workflow_ref` and `environment`, so a mismatch can be read off the log.
+**The permission is the part that is easy to get wrong.** An entry with the right
+repository and workflow that grants only *stage publish* is answered by the token exchange
+with exactly the same `404 OIDC token exchange error - package not found` as no entry at all.
+That is what blocked the first two 1.3.0 attempts after an entry had been created on the
+website. The entry was replaced from the command line, which needs the package owner to be
+logged in (`npm login`) and approves each change with two-factor authentication in the
+browser:
 
-**Then check without releasing.** Run the Release workflow by hand with the `oidc_check`
-box ticked (Actions → Release → Run workflow), or:
+```powershell
+npm trust list sf-testimpact
+npm trust revoke sf-testimpact --id=<id from the list>
+npm trust github sf-testimpact --file release.yml --repo muraliseelam/sf-testimpact --allow-publish --allow-stage-publish --yes
+```
+
+On Windows PowerShell with script execution disabled, call `npm.cmd` instead of `npm`.
+
+**Check without releasing.** Run the Release workflow by hand with the `oidc_check` box ticked
+(Actions → Release → Run workflow), or:
 
 ```powershell
 gh workflow run Release -f oidc_check=true
 ```
 
-The log ends with either `npm exchange: HTTP 200` and "Trusted Publishing works", or the
-404 and the field list above. Nothing is released by a check run.
+The log prints the token's claims and the exchange's HTTP status. A working setup answers
+**201**, and the step says "Trusted Publishing works". Nothing is released by a check run.
 
-**Then release.** Run the workflow again without the box (or `gh workflow run Release`).
-It recomputes 1.3.0 from the commits since `v1.2.0`, writes the changelog and version bump,
-tags, publishes through OIDC with a provenance attestation, and creates the GitHub release.
-
-**Why the guard exists.** semantic-release commits the version bump and pushes the tag
-*before* it publishes, so a publish failure leaves a tagged, unpublished release behind, and
-the newest tag is what it treats as the last release: the next run then finds nothing to do.
-That happened to 1.2.0 on 2026-09-09 and twice to 1.3.0 on 2026-10-12, each time undone by
-deleting the tag and reverting the release commit. With the exchange verified first, a
-misconfiguration fails the job before anything is written.
+**Why the workflow verifies the exchange before releasing.** semantic-release commits the
+version bump and pushes the tag *before* it publishes, so a publish failure leaves a tagged,
+unpublished release behind, and the newest tag is what it treats as the last release: the
+next run then finds nothing to do. That happened to 1.2.0 on 2026-09-09 and twice to 1.3.0 on
+2026-10-12, each time undone by deleting the tag and reverting the release commit. The
+"Verify the npm Trusted Publishing exchange" step now mints the same OIDC token, exchanges it,
+and fails the job before semantic-release unless npm answers with a 2xx, so a broken setup
+costs one failed run and leaves nothing behind.
 
 **What happened the first time.** The release run for 1.2.0 on 2026-09-09
 ([run 34411638267](https://github.com/muraliseelam/sf-testimpact/actions/runs/34411638267))
@@ -67,15 +79,15 @@ and tag were created. The published tarball is the same version and file list as
 built, but it is a different build: its shasum differs from the one in the CI log and it
 carries no provenance attestation, because it was not published from the workflow.
 
-**What fixes it.** npm Trusted Publishing: GitHub mints a short-lived OIDC token for the
+**What fixed it.** npm Trusted Publishing: GitHub mints a short-lived OIDC token for the
 workflow run, npm verifies it came from this repository and this workflow, and no long-lived
-secret is involved. The workflow no longer reads `NPM_TOKEN` at all — the token could not
-publish anyway — so the secret can be deleted whenever convenient.
+secret is involved. The `NPM_TOKEN` repository secret was deleted on 2026-10-13 after 1.3.0
+published without it. The npm token it held still exists on the npm account until it is
+revoked there (npmjs.com → Access Tokens); nothing in this repository uses it.
 
-Until the Trusted Publisher entry exists, a push of a `feat:` or `fix:` commit to `main`
-produces a run that fails at the verify step, with nothing committed and nothing tagged.
-Documentation and `chore:` commits produce a run that fails the same way, which is noise but
-not damage. Once the entry exists, every such push releases.
+If the Trusted Publisher entry is ever removed or loses the publish permission, a push of a
+`feat:` or `fix:` commit to `main` produces a run that fails at the verify step, with nothing
+committed and nothing tagged.
 
 ## How the version is chosen
 
@@ -88,8 +100,8 @@ From the Conventional Commit prefixes since the last tag:
 | any commit with `!` or a `BREAKING CHANGE:` footer | major |
 | only `docs:`, `chore:`, `ci:`, `test:`, `refactor:` | **no release** |
 
-`v1.3.0` is the current tag (unpublished — see the top of this file), so a run releases only
-the commits since it.
+`v1.3.0` is the current tag and the current npm version, so a run releases only the commits
+since it.
 
 ## Release branch
 
@@ -170,8 +182,10 @@ is `vX.Y.Z` and is pushed.
 
 ## Release checklist
 
-- [ ] Trusted Publisher configured on npmjs.com for `muraliseelam/sf-testimpact`,
-      workflow `release.yml` (one-time; see the top of this file).
+- [ ] `npm trust list sf-testimpact` shows the GitHub Actions entry for
+      `muraliseelam/sf-testimpact`, workflow `release.yml`, with the **publish** permission
+      (configured 2026-10-13; see the top of this file). `gh workflow run Release -f
+      oidc_check=true` confirms it without releasing.
 - [ ] `npm run check` passes.
 - [ ] `npm pack --dry-run` shows `oclif.manifest.json` and no `lib/bench/`.
 - [ ] `README.md` benchmark figures still match `docs/measurements/`.
