@@ -17,12 +17,14 @@ import {
 import { type IndexedFile, type ImpactGraph, type ProjectInfo } from '../graph/model.js';
 import {
   buildGraph,
+  checkStaleness,
   currentGenerator,
   hashBytes,
   hashContents,
   loadGraph,
   saveGraph,
   type FileSystem,
+  type StalenessReason,
 } from '../graph/store.js';
 import { type FileFacts } from '../types.js';
 
@@ -50,10 +52,25 @@ export interface IndexResult {
   readonly path: string;
   readonly extracted: number;
   readonly reused: number;
+  /**
+   * Why the stored index was discarded and every file re-extracted, or null when it was not.
+   *
+   * Set when the stored index was written by a different format version, parser major
+   * version or extractor identity than this build — typically after upgrading the plugin.
+   */
+  readonly rebuiltStale: StalenessReason | null;
 }
 
 export function runIndex(deps: IndexDeps, options: IndexOptions): IndexResult {
-  const existing = options.force === true ? null : loadGraph(deps.fs, options.root);
+  const stored = options.force === true ? null : loadGraph(deps.fs, options.root);
+  // A stored index from a different build cannot be extended: reusing its facts for the
+  // unchanged files would mix two generations of extractor output, which is exactly what
+  // the staleness check exists to refuse, and every `analyze` would then fall back with
+  // "run index --force". So a stale index is treated as absent and everything is
+  // re-extracted, as `--force` would. Before this, a plain `index` after an upgrade kept the
+  // stale facts and left the project falling back until someone forced a rebuild by hand.
+  const rebuiltStale = stored === null ? null : checkStaleness(stored);
+  const existing = rebuiltStale === null ? stored : null;
 
   // Hash from raw bytes where the filesystem can supply them. An incremental index must
   // read every candidate file to prove it is unchanged, so this read is the floor on how
@@ -105,5 +122,5 @@ export function runIndex(deps: IndexDeps, options: IndexOptions): IndexResult {
     createdAt,
   });
 
-  return { graph, plan, path, extracted: fresh.length, reused: plan.unchanged.length };
+  return { graph, plan, path, extracted: fresh.length, reused: plan.unchanged.length, rebuiltStale };
 }

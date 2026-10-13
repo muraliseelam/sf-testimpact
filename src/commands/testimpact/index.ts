@@ -89,6 +89,11 @@ export interface IndexJson {
   readonly edges: number;
   readonly taints: number;
   readonly unparseable: readonly string[];
+  /**
+   * The staleness rule that made this run discard the stored index and re-extract every
+   * file (for example `graph-stale-extractor-identity` after a plugin upgrade), or null.
+   */
+  readonly rebuiltBecause: string | null;
 }
 
 export default class TestImpactIndex extends SfCommand<IndexJson> {
@@ -152,21 +157,29 @@ export default class TestImpactIndex extends SfCommand<IndexJson> {
 
     const { plan, graph } = result;
     const unparseable = graph.files.filter((f) => !f.parsedOk).map((f) => f.path);
+    const json: IndexJson = {
+      path: result.path,
+      files: graph.files.length,
+      extracted: result.extracted,
+      reused: result.reused,
+      removed: plan.removed.length,
+      nodes: graph.nodes.length,
+      edges: graph.edges.length,
+      taints: graph.taints.length,
+      unparseable,
+      rebuiltBecause: result.rebuiltStale?.rule ?? null,
+    };
 
-    if (this.jsonEnabled()) {
-      return {
-        path: result.path,
-        files: graph.files.length,
-        extracted: result.extracted,
-        reused: result.reused,
-        removed: plan.removed.length,
-        nodes: graph.nodes.length,
-        edges: graph.edges.length,
-        taints: graph.taints.length,
-        unparseable,
-      };
+    if (this.jsonEnabled()) return json;
+
+    if (result.rebuiltStale !== null) {
+      // Said out loud: a full re-parse where an incremental one was expected is slower, and
+      // the reader should know it was deliberate and why.
+      this.log(
+        `The stored index was written by a different build (${result.rebuiltStale.rule}), so every ` +
+          'file was re-parsed.',
+      );
     }
-
     this.log(
       `Indexed ${graph.files.length} files: ${result.extracted} parsed, ${result.reused} unchanged` +
         (plan.removed.length > 0 ? `, ${plan.removed.length} removed` : ''),
@@ -182,16 +195,6 @@ export default class TestImpactIndex extends SfCommand<IndexJson> {
     }
 
     this.log(`Wrote ${result.path}`);
-    return {
-      path: result.path,
-      files: graph.files.length,
-      extracted: result.extracted,
-      reused: result.reused,
-      removed: plan.removed.length,
-      nodes: graph.nodes.length,
-      edges: graph.edges.length,
-      taints: graph.taints.length,
-      unparseable,
-    };
+    return json;
   }
 }

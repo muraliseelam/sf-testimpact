@@ -99,6 +99,29 @@ describe('runIndex', () => {
     expect(second.graph.files.map((f) => f.path)).not.toContain(`${CLASSES}/ServiceTest.cls`);
   });
 
+  it('re-extracts everything when the stored index came from a different extractor', () => {
+    // After a plugin upgrade the stored facts are an older extractor's output. Reusing them
+    // for unchanged files produced an index that every `analyze` then had to refuse, until
+    // someone ran `index --force` by hand.
+    const fs = memoryFs(SOURCES);
+    runIndex({ fs, walk: walkAll, now }, { root: '.', project: PROJECT });
+    const stored = JSON.parse(fs.readFile(graphPath('.'))) as { strings: string[] };
+    stored.strings = stored.strings.map((s) => (s === 'apex@1' ? 'apex@0' : s));
+    fs.writeFile(graphPath('.'), JSON.stringify(stored));
+
+    const second = runIndex({ fs, walk: walkAll, now }, { root: '.', project: PROJECT });
+    expect(second.rebuiltStale?.rule).toBe('graph-stale-extractor-identity');
+    expect(second.extracted).toBe(3);
+    expect(second.reused).toBe(0);
+    expect(second.graph.files.some((f) => f.extractor === 'apex@0')).toBe(false);
+  });
+
+  it('reports no rebuild when the stored index is current', () => {
+    const fs = memoryFs(SOURCES);
+    runIndex({ fs, walk: walkAll, now }, { root: '.', project: PROJECT });
+    expect(runIndex({ fs, walk: walkAll, now }, { root: '.', project: PROJECT }).rebuiltStale).toBeNull();
+  });
+
   it('re-extracts everything under --force', () => {
     const fs = memoryFs(SOURCES);
     runIndex({ fs, walk: walkAll, now }, { root: '.', project: PROJECT });
