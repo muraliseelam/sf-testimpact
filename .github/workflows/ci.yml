@@ -29,3 +29,12 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm run test:coverage
+
+      # docs/commands.md carries a flag reference generated from the command definitions.
+      # Regenerate it and fail on any difference, so the documented flags cannot drift from
+      # the real ones. Run `npm run docs:commands` and commit the result to fix it.
+      - name: Check the generated command reference is current
+        if: matrix.node == '24'
+        run: |
+          npx oclif readme --readme-path docs/commands.md --no-source-links
+          git diff --exit-code -- docs/commands.md
