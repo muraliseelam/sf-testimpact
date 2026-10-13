@@ -67,7 +67,9 @@ import {
  * Without it a parser or rule upgrade would silently mix old and new facts, which is the
  * one class of bug this project cannot afford.
  */
-export const APEX_EXTRACTOR_ID = 'apex@1';
+export const APEX_EXTRACTOR_ID = 'apex@2';
+// apex@2: a test METHOD annotated `@IsTest(SeeAllData=true)` marks its class SEE_ALL_DATA.
+// apex@1 looked only at the class annotation, so such a test was not always run.
 
 // ---------------------------------------------------------------------------------------
 // Dynamic-construct tables (DESIGN.md 6.2)
@@ -457,9 +459,14 @@ class DeclarationCollector extends ApexParserBaseListener {
 
     const isTestMethod = mods.includes('testmethod') || mods.some((m) => m.startsWith('@istest'));
     if (isTestMethod) {
+      // `SeeAllData=true` is legal on a single test method as well as on the class, and
+      // either way the method reads org data that is not in git, so the class must always
+      // run. Only the class annotation used to count, which let a method-level one be
+      // skipped: an under-selection the README claimed was mitigated.
+      const seesAllData = mods.some((m) => m.replace(/\s+/g, '').includes('seealldata=true'));
       const updated: DeclaredType = {
         ...info.declaration,
-        flags: info.declaration.flags | NodeFlags.IS_TEST,
+        flags: info.declaration.flags | NodeFlags.IS_TEST | (seesAllData ? NodeFlags.SEE_ALL_DATA : 0),
         testMethods: [...info.declaration.testMethods, ctx.id().getText()],
       };
       this.types.set(info.declaration.name, { declaration: updated, members: info.members });

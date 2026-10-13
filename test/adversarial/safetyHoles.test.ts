@@ -200,6 +200,36 @@ describe('hypothesis: SeeAllData and alwaysRun can be lost to a low reduction ca
   });
 });
 
+describe('hypothesis: SeeAllData on a single test method is lost', () => {
+  // CONFIRMED and fixed in apex@2. Apex allows `@IsTest(SeeAllData=true)` on a method as
+  // well as on the class; only the class annotation used to count, so this test class was
+  // never always-run and could be skipped while reading org data the change affected.
+  const graph = graphOf({
+    [`${CLASS_DIR}/Idle.cls`]: 'public class Idle {}',
+    [`${CLASS_DIR}/MethodLevelTest.cls`]:
+      '@IsTest private class MethodLevelTest { @IsTest(SeeAllData=true) static void t() { System.assertEquals(1,1); } }',
+    [`${CLASS_DIR}/SpacedTest.cls`]:
+      '@IsTest private class SpacedTest { @isTest(seeAllData = true) static void t() { System.assertEquals(1,1); } }',
+    [`${CLASS_DIR}/PlainTest.cls`]:
+      '@IsTest private class PlainTest { @IsTest static void t() { System.assertEquals(1,1); } }',
+  });
+
+  it('always selects a class whose test method sees all data, however the annotation is spelled', () => {
+    const result = analyze(
+      graph,
+      [{ path: `${CLASS_DIR}/Idle.cls`, kind: 'modified' }],
+      configWith({ maxReductionPercent: 100 }),
+    );
+    expect(testNames(result.tests)).toEqual(['MethodLevelTest', 'SpacedTest']);
+    expect(result.tests.every((t) => t.reason === 'see-all-data')).toBe(true);
+  });
+
+  it('does not mark a class whose test methods do not see all data', () => {
+    const plain = allTestClasses(graph).find((n) => n.name === 'PlainTest');
+    expect(plain !== undefined && hasFlag(plain.flags, NodeFlags.SEE_ALL_DATA)).toBe(false);
+  });
+});
+
 describe('hypothesis: the reduction circuit breaker mis-handles its boundary', () => {
   const graph = graphOf({
     [`${CLASS_DIR}/Target.cls`]: 'public class Target { public static void run() {} }',

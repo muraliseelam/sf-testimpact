@@ -10,6 +10,7 @@ import { graphPath, loadGraph, type FileSystem } from '../../src/graph/store.js'
 import { loadConfig, loadProject } from '../../src/project.js';
 import type { TestImpactError } from '../../src/errors.js';
 import { apexKey } from '../helpers/buildGraph.js';
+import { APEX_EXTRACTOR_ID } from '../../src/extract/apex.js';
 
 function memoryFs(seed: Record<string, string> = {}): FileSystem & { files: Map<string, string> } {
   const files = new Map(Object.entries(seed));
@@ -106,7 +107,7 @@ describe('runIndex', () => {
     const fs = memoryFs(SOURCES);
     runIndex({ fs, walk: walkAll, now }, { root: '.', project: PROJECT });
     const stored = JSON.parse(fs.readFile(graphPath('.'))) as { strings: string[] };
-    stored.strings = stored.strings.map((s) => (s === 'apex@1' ? 'apex@0' : s));
+    stored.strings = stored.strings.map((s) => (s === APEX_EXTRACTOR_ID ? 'apex@0' : s));
     fs.writeFile(graphPath('.'), JSON.stringify(stored));
 
     const second = runIndex({ fs, walk: walkAll, now }, { root: '.', project: PROJECT });

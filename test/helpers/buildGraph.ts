@@ -6,7 +6,7 @@
  */
 
 import { DEFAULT_CONFIG, type Config } from '../../src/config/schema.js';
-import { extractApex } from '../../src/extract/apex.js';
+import { APEX_EXTRACTOR_ID, extractApex } from '../../src/extract/apex.js';
 import { buildGraph, currentGenerator, hashContents } from '../../src/graph/store.js';
 import { type GraphGenerator, type ImpactGraph, type IndexedFile } from '../../src/graph/model.js';
 import {
@@ -37,7 +37,7 @@ export function trigger(name: string, source: string): SourceFile {
 export function meta(path: string, entries: Array<[string, NodeKind]>): FileFacts {
   return {
     path,
-    extractor: 'apex@1',
+    extractor: APEX_EXTRACTOR_ID,
     parsedOk: true,
     declarations: entries.map(([name, kind]) => ({
       name,
@@ -89,14 +89,14 @@ export function graphOf(sources: readonly SourceFile[], options: GraphFixtureOpt
     path: s.path,
     hash: hashContents(s.source),
     parsedOk: apexFacts[i]?.parsedOk ?? true,
-    extractor: options.extractorId ?? 'apex@1',
+    extractor: options.extractorId ?? APEX_EXTRACTOR_ID,
   }));
   for (const extra of options.extraFacts ?? []) {
     files.push({
       path: extra.path,
       hash: hashContents(extra.path),
       parsedOk: true,
-      extractor: options.extractorId ?? 'apex@1',
+      extractor: options.extractorId ?? APEX_EXTRACTOR_ID,
     });
   }
 

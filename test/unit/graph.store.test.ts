@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { extractApex } from '../../src/extract/apex.js';
+import { APEX_EXTRACTOR_ID, extractApex } from '../../src/extract/apex.js';
 import {
   filesToExtract,
   mergeFacts,
@@ -170,7 +170,7 @@ describe('hashContents', () => {
 });
 
 describe('checkStaleness (DESIGN.md 7.3)', () => {
-  const files: IndexedFile[] = [{ path: 'a.cls', hash: 'h', parsedOk: true, extractor: 'apex@1' }];
+  const files: IndexedFile[] = [{ path: 'a.cls', hash: 'h', parsedOk: true, extractor: APEX_EXTRACTOR_ID }];
 
   it('accepts a current index', () => {
     expect(checkStaleness({ generator: currentGenerator(), files })).toBeNull();
@@ -206,9 +206,9 @@ describe('checkStaleness (DESIGN.md 7.3)', () => {
 
 describe('planReindex', () => {
   const indexed: IndexedFile[] = [
-    { path: 'a.cls', hash: 'h-a', parsedOk: true, extractor: 'apex@1' },
-    { path: 'b.cls', hash: 'h-b', parsedOk: true, extractor: 'apex@1' },
-    { path: 'gone.cls', hash: 'h-g', parsedOk: true, extractor: 'apex@1' },
+    { path: 'a.cls', hash: 'h-a', parsedOk: true, extractor: APEX_EXTRACTOR_ID },
+    { path: 'b.cls', hash: 'h-b', parsedOk: true, extractor: APEX_EXTRACTOR_ID },
+    { path: 'gone.cls', hash: 'h-g', parsedOk: true, extractor: APEX_EXTRACTOR_ID },
   ];
 
   it('classifies unchanged, changed, added and removed files', () => {
@@ -249,8 +249,8 @@ describe('mergeFacts / mergeFiles', () => {
   it('replaces a changed file’s facts rather than keeping both generations', () => {
     const plan = planReindex(
       [
-        { path: `${CLASS_DIR}/A.cls`, hash: '1', parsedOk: true, extractor: 'apex@1' },
-        { path: `${CLASS_DIR}/C.cls`, hash: '2', parsedOk: true, extractor: 'apex@1' },
+        { path: `${CLASS_DIR}/A.cls`, hash: '1', parsedOk: true, extractor: APEX_EXTRACTOR_ID },
+        { path: `${CLASS_DIR}/C.cls`, hash: '2', parsedOk: true, extractor: APEX_EXTRACTOR_ID },
       ],
       [
         { path: `${CLASS_DIR}/A.cls`, hash: 'changed' },
@@ -266,7 +266,7 @@ describe('mergeFacts / mergeFiles', () => {
 
   it('drops facts for a removed file', () => {
     const plan = planReindex(
-      [{ path: `${CLASS_DIR}/C.cls`, hash: '2', parsedOk: true, extractor: 'apex@1' }],
+      [{ path: `${CLASS_DIR}/C.cls`, hash: '2', parsedOk: true, extractor: APEX_EXTRACTOR_ID }],
       [],
     );
     expect(mergeFacts([other], [], plan)).toEqual([]);
@@ -280,12 +280,12 @@ describe('mergeFacts / mergeFiles', () => {
 
   it('keeps the file table in step with the facts', () => {
     const plan = planReindex(
-      [{ path: `${CLASS_DIR}/A.cls`, hash: '1', parsedOk: true, extractor: 'apex@1' }],
+      [{ path: `${CLASS_DIR}/A.cls`, hash: '1', parsedOk: true, extractor: APEX_EXTRACTOR_ID }],
       [{ path: `${CLASS_DIR}/A.cls`, hash: 'changed' }],
     );
     const merged = mergeFiles(
-      [{ path: `${CLASS_DIR}/A.cls`, hash: '1', parsedOk: true, extractor: 'apex@1' }],
-      [{ path: `${CLASS_DIR}/A.cls`, hash: 'changed', parsedOk: true, extractor: 'apex@1' }],
+      [{ path: `${CLASS_DIR}/A.cls`, hash: '1', parsedOk: true, extractor: APEX_EXTRACTOR_ID }],
+      [{ path: `${CLASS_DIR}/A.cls`, hash: 'changed', parsedOk: true, extractor: APEX_EXTRACTOR_ID }],
       plan,
     );
     expect(merged).toHaveLength(1);
