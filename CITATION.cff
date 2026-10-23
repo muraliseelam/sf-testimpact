@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use sf-testimpact in your work, please cite it using the metadata below."
+title: "sf-testimpact: change-impact analysis for safe Apex test selection in Salesforce deployments"
+abstract: >-
+  sf-testimpact performs static change-impact analysis for Salesforce. It builds a
+  dependency graph of Apex and metadata, resolves a git diff into that graph, and
+  computes the minimum set of Apex tests a change can affect, so a deployment runs only
+  the relevant tests instead of the full suite. It is a correctness tool governed by the
+  rule "over-approximate freely, under-approximate never": anything unresolvable widens
+  the selection or falls back to running all tests, and reports the rule that fired.
+type: software
+authors:
+  - family-names: Seelam
+    given-names: Murali Mohan Reddy
+    # orcid: "https://orcid.org/0000-0000-0000-0000"  # add after you register a free ORCID iD
+version: 1.3.1
+date-released: 2026-10-13
+license: MIT
+repository-code: "https://github.com/muraliseelam/sf-testimpact"
+url: "https://github.com/muraliseelam/sf-testimpact"
+# identifiers:                       # uncomment and fill in after the first Zenodo archive
+#   - type: doi
+#     value: "10.5281/zenodo.XXXXXXX"
+#     description: "Concept DOI that always resolves to the latest version"
+keywords:
+  - Salesforce
+  - Apex
+  - regression test selection
+  - change impact analysis
+  - continuous integration
+  - DevOps
+  - software testing
+  - dependency graph
