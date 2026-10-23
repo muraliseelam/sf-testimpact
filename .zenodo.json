@@ -1,0 +1,23 @@
+{
+  "upload_type": "software",
+  "title": "sf-testimpact: change-impact analysis for safe Apex test selection in Salesforce deployments",
+  "description": "sf-testimpact performs static change-impact analysis for Salesforce. It builds a dependency graph of Apex and metadata, resolves a git diff into that graph, and computes the minimum set of Apex tests a change can affect, so a deployment runs only the relevant tests instead of the full suite. It is a correctness tool governed by the rule \"over-approximate freely, under-approximate never\": anything unresolvable widens the selection or falls back to running all tests, and reports the rule that fired.",
+  "creators": [
+    { "name": "Seelam, Murali Mohan Reddy" }
+  ],
+  "license": "MIT",
+  "access_right": "open",
+  "keywords": [
+    "Salesforce",
+    "Apex",
+    "regression test selection",
+    "change impact analysis",
+    "continuous integration",
+    "DevOps",
+    "software testing",
+    "dependency graph"
+  ],
+  "related_identifiers": [
+    { "identifier": "https://github.com/muraliseelam/sf-testimpact", "relation": "isSupplementTo", "scheme": "url" }
+  ]
+}
